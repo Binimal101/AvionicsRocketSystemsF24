@@ -59,7 +59,7 @@ class FlightDataLogger:
 
     def log_flight_data(self):
         """Log the flight data to a file continuously."""
-        
+
         # Open a log file to store flight data, using the current date for naming
         with open(f"flightLogs/{self.date}.log", "a", encoding="utf-8") as file:
             while True:  # Main loop for continuous data collection
