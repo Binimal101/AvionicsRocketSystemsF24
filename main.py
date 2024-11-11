@@ -5,18 +5,17 @@ It retrieves sensor data and writes it to a log file for later analysis.
 
 from pprint import pprint
 import json
-from datetime import datetime
 import time
 import board
 import adafruit_bno055
+from sensors.altimeter import MS5611
+import numpy
 
 class FlightDataLogger:
     """Class to collect and log flight data from sensors."""
 
     def __init__(self):
         """Initialize the FlightDataLogger with necessary setup."""
-        # Get the current date and time in a specific format for logging
-        self.date = datetime.now().strftime("%m/%d/%Y, %H:%M")
 
         # SETUP
         self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
@@ -60,8 +59,17 @@ class FlightDataLogger:
     def log_flight_data(self):
         """Log the flight data to a file continuously."""
 
+        # Configure GPIO pins
+        cs_pin = 24
+        clock_pin = 11
+        data_in_pin = 9
+        data_out_pin = 10
+
+        # Use the create method to instantiate MS5611
+        ms = MS5611.create(cs_pin, clock_pin, data_in_pin, data_out_pin)
+
         # Open a log file to store flight data, using the current date for naming
-        with open(f"flightLogs/{self.date}.log", "a", encoding="utf-8") as file:
+        with open(f"flightLogs/{time.time}.log", "a", encoding="utf-8") as file:
             while True:  # Main loop for continuous data collection
                 # Calculate the time elapsed since the start
                 self.flight_package["time"] = time.time() - self.start_time
@@ -74,6 +82,15 @@ class FlightDataLogger:
                 self.flight_package["gyro"]["quaternion"] = list(self.sensor.quaternion)
                 self.flight_package["gyro"]["gravity"] = list(self.sensor.gravity)
                 self.flight_package["gyro"]["magnetic"] = list(self.sensor.magnetic)
+
+                ms.update()
+                temp = ms.returnTemperature()
+                pres = ms.returnPressure()
+                alt = ms.returnAltitude(101.7)
+
+                self.flightPackage["altimeter"]["temperature"] = temp
+                self.flightPackage["altimeter"]["pressure"] = pres
+                self.flightPackage["altimeter"]["altitude"] = alt
 
                 # Capture altimeter pressure and calculate altitude.
                 # Take a photo and add its path to 'imageLocation'.
