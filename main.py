@@ -1,12 +1,12 @@
 from pprint import pprint
-import json, datetime
+import json
 
 import time
 import board
+import numpy
+
 import adafruit_bno055
-
-
-date = datetime.now().strftime("%m/%d/%Y, %H:%M")
+from altimeter import MS5611
 
 #SETUP
 i2c = board.I2C()  # uses board.SCL and board.SDA (wired config in the google sheet)
@@ -26,7 +26,7 @@ def temperature():
 
 #START
 flightPackage = {
-	"imageLocation" : None
+	"imageLocation" : None,
 	"gyro" : {},
 	"altimeter" : {},
 	"time" : -1,
@@ -34,8 +34,17 @@ flightPackage = {
 
 flightPackages = []
 
+# Configure Altimeter
+cs_pin = 24
+clock_pin = 11
+data_in_pin = 9
+data_out_pin = 10
+
+ms = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin)
+
+
 startTime = time.time() #epoch secs
-with open(f"flightLogs/{date}.log", "a") as file:
+with open(f"flightLogs/{time.time()}.log", "a") as file:
 	while True: #TODO end condition == (velocity == 0 for c seconds)
 		flightPackage["time"] = time.time() - startTime
 		flightPackage["gyro"]["temperature"] = temperature()
@@ -44,8 +53,16 @@ with open(f"flightLogs/{date}.log", "a") as file:
 		flightPackage["gyro"]["quaternion"] = list(sensor.quaternion)
 		flightPackage["gyro"]["gravity"] = list(sensor.gravity)
 		flightPackage["gyro"]["magnetic"] = list(sensor.magnetic)
+		
+		ms.update()
+		temp = ms.returnTemperature()
+		pres = ms.returnPressure()
+		alt = ms.returnAltitude(101.7)
+        
+		flightPackage["altimeter"]["temperature"] = temp
+		flightPackage["altimeter"]["pressure"] = pres
+		flightPackage["altimeter"]["altitude"] = alt
 
-		#TODO grab Altimeter Pressure & derive Altitude
 		#TODO grab photo, save locally, add relPath to package (hopefully sending over lo-framerate compressed B32 images is plausible over radio)
 		
 		pprint(flightPackage) #TODO remove for deployment
