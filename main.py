@@ -2,7 +2,6 @@
 This module handles the collection and logging of flight data from sensors.
 It retrieves sensor data and writes it to a log file for later analysis.
 """
-
 from pprint import pprint
 import json
 import time
