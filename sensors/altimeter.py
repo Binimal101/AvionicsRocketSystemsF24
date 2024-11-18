@@ -93,9 +93,10 @@ class MS5611(object):
                       
         # Reset sensor
         self._send_command(self.__MS5611_RESET)
-        time.sleep(4.0)
-                      
+        time.sleep(0.03)
+
         # Load compensation parameters
+        print("reading coeffs")
         self._read_coefficients()
         time.sleep(1.0)
         
@@ -120,6 +121,11 @@ class MS5611(object):
         self._spixfer(register)    # send request to read from register
         value = (self._spixfer(0) << 8) | self._spixfer(0) 
         GPIO.output(self.cs_pin, GPIO.HIGH)
+        
+        # Add validation
+        if value == 0xFFFF:  # Invalid read
+            raise IOError(f"Failed to read register {hex(register)}")
+        
         return value
 
     def _read24(self, register):
@@ -144,15 +150,17 @@ class MS5611(object):
         self.C4 = self._read16(self.__MS5611_C4)   # UINT16
         self.C5 = self._read16(self.__MS5611_C5)   # UINT16
         self.C6 = self._read16(self.__MS5611_C6)   # UINT16
-              
-        '''
-        print 'C1 = {0:10d}'.format(self.C1)
-        print 'C2 = {0:10d}'.format(self.C2)
-        print 'C3 = {0:10d}'.format(self.C3)
-        print 'C4 = {0:10d}'.format(self.C4)
-        print 'C5 = {0:10d}'.format(self.C5)
-        print 'C6 = {0:10d}'.format(self.C6)
-        '''
+
+        if self.C1 == 0 or self.C6 == 0:
+            raise ValueError("Invalid calibration coefficients read from MS5611")
+        
+        print('C1 = {0:10d}'.format(self.C1))
+        print('C2 = {0:10d}'.format(self.C2))
+        print('C3 = {0:10d}'.format(self.C3))
+        print('C4 = {0:10d}'.format(self.C4))
+        print('C5 = {0:10d}'.format(self.C5))
+        print('C6 = {0:10d}'.format(self.C6))
+       
             
     def _read_adc(self):
         GPIO.output(self.cs_pin, GPIO.LOW)

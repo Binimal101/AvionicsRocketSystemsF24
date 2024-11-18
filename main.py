@@ -3,12 +3,71 @@ This module handles the collection and logging of flight data from sensors.
 It retrieves sensor data and writes it to a log file for later analysis.
 """
 from pprint import pprint
+import math
 import json
 import time
 import board
 import adafruit_bno055
 from sensors.altimeter import MS5611
 import numpy
+
+"""
+def get_angle_representation(w, x, y, z):
+    
+    # Roll (x-axis rotation)
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + y * y)
+    roll = math.atan2(t0, t1)
+
+    # Pitch (y-axis rotation)
+    t2 = +2.0 * (w * y - z * x)
+    t2 = +1.0 if t2 > +1.0 else t2
+    t2 = -1.0 if t2 < -1.0 else t2
+    pitch = math.asin(t2)
+
+    # Yaw (z-axis rotation)
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (y * y + z * z)
+    yaw = math.atan2(t3, t4)
+
+    return [x for x in (roll, pitch, yaw)] #(-pi, pi) for x in range(3)
+"""
+
+def get_angle_representation(w, x, y, z):
+    """
+    Converts quaternion (w, x, y, z) to Euler angles (roll, pitch, yaw) with full 360° coverage.
+    
+    Parameters:
+        w, x, y, z: float
+            The quaternion components.
+    
+    Returns:
+        tuple: (roll, pitch, yaw) in radians, all normalized to the range [-pi, pi].
+    """
+    # Define normalize_angle as a lambda function to wrap angles to [-pi, pi]
+    normalize_angle = lambda angle: ((angle + math.pi) % (2 * math.pi)) - math.pi
+
+    # Roll (x-axis rotation)
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + y * y)
+    roll = math.atan2(t0, t1)
+
+    # Pitch (y-axis rotation)
+    t2 = +2.0 * (w * y - z * x)
+    t2 = max(-1.0, min(1.0, t2))  # Clamp to avoid out-of-bound errors with asin
+    pitch = math.asin(t2)
+
+    # Yaw (z-axis rotation)
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (y * y + z * z)
+    yaw = math.atan2(t3, t4)
+
+    # Normalize roll, pitch, and yaw to the range [-pi, pi]
+    roll = normalize_angle(roll)
+    pitch = normalize_angle(pitch)
+    yaw = normalize_angle(yaw)
+
+    return roll, pitch, yaw
 
 class FlightDataLogger:
     """Class to collect and log flight data from sensors."""
@@ -21,7 +80,7 @@ class FlightDataLogger:
 
         # Create a sensor object for the BNO055 sensor
         self.sensor = adafruit_bno055.BNO055_I2C(self.i2c)
-
+        
         # This variable holds the last temperature reading to prevent erroneous readings
         self.last_temperature_reading = 0xFFFF
 
@@ -37,7 +96,7 @@ class FlightDataLogger:
         self.start_time = time.time()  # Get the current time in epoch seconds
 
     def get_temperature(self):
-        """Retrieve and process the temperature from the sensor.
+        """Retrieve and process the temperature from the gyro.
 
         Returns:
             int: The temperature reading from the sensor, processed to handle
@@ -58,6 +117,9 @@ class FlightDataLogger:
     def log_flight_data(self):
         """Log the flight data to a file continuously."""
 
+        run_cycle = 0 # incremented
+        transmit_cycles = 5 # used for modulo
+
         # Configure GPIO pins
         cs_pin = 24
         clock_pin = 11
@@ -66,44 +128,51 @@ class FlightDataLogger:
 
         # Use the create method to instantiate MS5611
         ms = MS5611.create(cs_pin, clock_pin, data_in_pin, data_out_pin)
+        ms.update()
+        time.sleep(0.1) # allows sensor to breathe
 
         # Open a log file to store flight data, using the current date for naming
-        with open(f"flightLogs/{time.time}.log", "a", encoding="utf-8") as file:
+        with open(f"flightLogs/{str(time.time)}.log", "a", encoding="utf-8") as file:
             while True:  # Main loop for continuous data collection
                 # Calculate the time elapsed since the start
                 self.flight_package["time"] = time.time() - self.start_time
 
                 # Collect sensor data and store in the flight package
-                self.flight_package["gyro"]["temperature"] = self.get_temperature()
-                self.flight_package["gyro"]["linearAcceleration"] = list(
-    			self.sensor.linear_acceleration)
-                self.flight_package["gyro"]["radialVelocity"] = list(self.sensor.gyro)
+                """
+                formatted angles and quaternion data are respective to cardinal directions assigned at calibration
+                """
                 self.flight_package["gyro"]["quaternion"] = list(self.sensor.quaternion)
-                self.flight_package["gyro"]["gravity"] = list(self.sensor.gravity)
+                
+                if not all(self.flight_package["gyro"]["quaternion"]):
+                    continue #NoneType encountered in readloop
+                
+                self.flight_package["gyro"]["formattedAngle"] = get_angle_representation(*self.flight_package["gyro"]["quaternion"])
+                
+                self.flight_package["gyro"]["linearAcceleration"] = list(self.sensor.linear_acceleration)
+                self.flight_package["gyro"]["radialVelocity"] = list(self.sensor.gyro)
                 self.flight_package["gyro"]["magnetic"] = list(self.sensor.magnetic)
-
-                ms.update()
-                temp = ms.returnTemperature()
-                pres = ms.returnPressure()
-                alt = ms.returnAltitude(101.7)
-
-                self.flightPackage["altimeter"]["temperature"] = temp
-                self.flightPackage["altimeter"]["pressure"] = pres
-                self.flightPackage["altimeter"]["altitude"] = alt
+                self.flight_package["gyro"]["gravity"] = list(self.sensor.gravity)
+                self.flight_package["gyro"]["temperature"] = self.get_temperature()
 
                 # Capture altimeter pressure and calculate altitude.
-                # Take a photo and add its path to 'imageLocation'.
-                # Add radio transmission logic to send data at intervals.
 
+                self.flight_package["altimeter"]["temperature"] = float(ms.returnTemperature()) * (9/5) + 32
+                self.flight_package["altimeter"]["pressure"] = ms.returnPressure()
+                self.flight_package["altimeter"]["altitude"] = ms.returnAltitude(101.7)
+                
+                ms.update()
+                
+                # Take a photo and add its path to 'imageLocation'.
+                
                 pprint(self.flight_package)  # Print the flight package to the console for debugging
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ", "
-                file.write(json_data)  # Append the JSON data to the log file
+                
+                #TODO undo file.write(json_data)  # Append the JSON data to the log file
 
                 # Add radio transmission for flightPackage every n measurement cycles
-
-                time.sleep(0.5)  # Delay between data collection cycles to reduce load
+                time.sleep(0.5)  # Delay between data collection cycles
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
