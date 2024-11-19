@@ -3,35 +3,10 @@ This module handles the collection and logging of flight data from sensors.
 It retrieves sensor data and writes it to a log file for later analysis.
 """
 from pprint import pprint
-import math
-import json
-import time
-import board
-import adafruit_bno055
+import math, json, time, numpy, os
+import board, adafruit_bno055
+
 from sensors.altimeter import MS5611
-import numpy
-
-"""
-def get_angle_representation(w, x, y, z):
-    
-    # Roll (x-axis rotation)
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x * x + y * y)
-    roll = math.atan2(t0, t1)
-
-    # Pitch (y-axis rotation)
-    t2 = +2.0 * (w * y - z * x)
-    t2 = +1.0 if t2 > +1.0 else t2
-    t2 = -1.0 if t2 < -1.0 else t2
-    pitch = math.asin(t2)
-
-    # Yaw (z-axis rotation)
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    yaw = math.atan2(t3, t4)
-
-    return [x for x in (roll, pitch, yaw)] #(-pi, pi) for x in range(3)
-"""
 
 def get_angle_representation(w, x, y, z):
     """
@@ -75,7 +50,8 @@ class FlightDataLogger:
     def __init__(self):
         """Initialize the FlightDataLogger with necessary setup."""
 
-        # SETUP
+        # SETUP WITH THREADS THEN AWAIT EVERYTHING
+
         self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
 
         # Create a sensor object for the BNO055 sensor
@@ -131,9 +107,19 @@ class FlightDataLogger:
         ms.update()
         time.sleep(0.1) # allows sensor to breathe
 
+        #create new logfile in ../flightLogs/logfileNM
+        current_file_dir = os.path.dirname(__file__)
+
+        # Navigate to the "main scope" directory (parent of 'outer/')
+        main_scope_dir = os.path.abspath(os.path.join(current_file_dir, ".."))
+
+        # Create a file in the "main scope"
+        file_path = os.path.join(main_scope_dir, f"flightLogs/{str(time.time)}.txt")
+
         # Open a log file to store flight data, using the current date for naming
-        with open(f"flightLogs/{str(time.time)}.log", "a", encoding="utf-8") as file:
+        with open(f"file_path", "a", encoding="utf-8") as file:
             while True:  # Main loop for continuous data collection
+
                 # Calculate the time elapsed since the start
                 self.flight_package["time"] = time.time() - self.start_time
 
@@ -141,6 +127,7 @@ class FlightDataLogger:
                 """
                 formatted angles and quaternion data are respective to cardinal directions assigned at calibration
                 """
+            
                 self.flight_package["gyro"]["quaternion"] = list(self.sensor.quaternion)
                 
                 if not all(self.flight_package["gyro"]["quaternion"]):
@@ -169,10 +156,10 @@ class FlightDataLogger:
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ", "
                 
-                #TODO undo file.write(json_data)  # Append the JSON data to the log file
+                file.write(json_data)  # Append the JSON data to the log file
 
                 # Add radio transmission for flightPackage every n measurement cycles
-                time.sleep(0.5)  # Delay between data collection cycles
+                time.sleep(0.25)  # Delay between data collection cycles
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
