@@ -64,9 +64,19 @@ async function main() {
   // Clear the color buffer with specified clear color
   gl.clear(gl.COLOR_BUFFER_BIT);
 
+  const parts = data.geometries.map(({data}) => {
+    const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
+    return {
+      material: {
+        u_diffuse: [Math.random(), Math.random(), Math.random(), 1],
+      },
+      bufferInfo,
+    };
+  });
+
   const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
   
-  const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
+  
 
   const cameraTarget = [0, 10, 0];
   const cameraPosition = [0, 0, 50];
@@ -105,18 +115,23 @@ async function main() {
  
     // calls gl.uniform
     webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
+    // compute the world matrix once since all parts
+  // are at the same space.
+    const u_world = m4.yRotation(time);
  
+    for (const {bufferInfo, material} of parts) {
     // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
     webglUtils.setBuffersAndAttributes(gl, meshProgramInfo, bufferInfo);
  
     // calls gl.uniform
     webglUtils.setUniforms(meshProgramInfo, {
-      u_world: m4.yRotation(time),
-      u_diffuse: [1, 0.7, 0.5, 1],
+      u_world,
+      u_diffuse: material.u_diffuse,
     });
  
     // calls gl.drawArrays or gl.drawElements
     webglUtils.drawBufferInfo(gl, bufferInfo);
+  }
  
     requestAnimationFrame(render);
   }
@@ -198,15 +213,44 @@ function initShaderProgram(gl, vsSource, fsSource) {
       [],   // texcoords
       [],   // normals
     ];
-  
-    function newGeometry() {
-      // If there is an existing geometry and it's
-      // not empty then start a new one.
-      if (geometry && geometry.data.position.length) {
-        geometry = undefined;
-      }
-      setGeometry();
+  const materialLibs = [];
+  const geometries = [];
+  let groups = ['default'];
+  let geometry;
+  let material = 'default';
+  let object = 'default';
+ 
+  function newGeometry() {
+    // If there is an existing geometry and it's
+    // not empty then start a new one.
+    if (geometry && geometry.data.position.length) {
+      geometry = undefined;
     }
+  }
+ 
+  function setGeometry() {
+    if (!geometry) {
+      const position = [];
+      const texcoord = [];
+      const normal = [];
+      webglVertexData = [
+        position,
+        texcoord,
+        normal,
+      ];
+      geometry = {
+        object,
+        groups,
+        material,
+        data: {
+          position,
+          texcoord,
+          normal,
+        },
+      };
+      geometries.push(geometry);
+    }
+  }
   
     function addVertex(vert) {
       const ptn = vert.split('/');
@@ -220,8 +264,11 @@ function initShaderProgram(gl, vsSource, fsSource) {
       });
     }
   
+    const noop = () => {};
+
     const keywords = {
       v(parts) {
+        setGeometry();
         objPositions.push(parts.map(parseFloat));
       },
       vn(parts) {
@@ -238,6 +285,22 @@ function initShaderProgram(gl, vsSource, fsSource) {
           addVertex(parts[tri + 1]);
           addVertex(parts[tri + 2]);
         }
+      },
+      g(parts) {
+        groups = parts;
+        newGeometry()
+      },
+      s: noop,
+      mtllib(parts, unparsedArgs) {
+        materialLibs.push(unparsedArgs);
+      },
+      o(parts, unparsedArgs) {
+        object = unparsedArgs;
+        newGeometry();
+      },
+      usemtl(parts, unparsedArgs) {
+        material = unparsedArgs;
+        newGeometry();
       },
     };
   
@@ -262,9 +325,14 @@ function initShaderProgram(gl, vsSource, fsSource) {
       handler(parts, unparsedArgs);
     }
   
-    return {
-      position: webglVertexData[0],
-      texcoord: webglVertexData[1],
-      normal: webglVertexData[2],
-    };
+      // remove any arrays that have no entries.
+  for (const geometry of geometries) {
+    geometry.data = Object.fromEntries(
+        Object.entries(geometry.data).filter(([, array]) => array.length > 0));
   }
+ 
+  return {
+    materialLibs,
+    geometries,
+  };
+}
