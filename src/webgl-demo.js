@@ -34,15 +34,22 @@ const modelPath = 'model/RocketShip.obj';
 
 main();
 
-
-
 //
 // start here
 //
 async function main() {
   //loading model 
-  
 
+  //demo controls & values
+  var angleY = 0;
+  var angleX = 0;
+  var angleZ = 0;
+  function setAngleX(deg) { angleX = deg;  console.log("changed to " + angleX); return angleX;  }
+  function setAngleY(deg) { angleY = deg; return angleY; }
+  function setAngleZ(deg) { angleZ = deg; return angleZ; }
+  document.getElementById("xAngle").addEventListener("input", (e)=>{setAngleX(Number(e.target.value)); document.getElementById("xDegrees").textContent = document.getElementById("xAngle").value + " Degrees"});
+  document.getElementById("yAngle").addEventListener("input", (e)=>{setAngleY(Number(e.target.value)); document.getElementById("yDegrees").textContent = document.getElementById("yAngle").value + " Degrees"});
+  document.getElementById("zAngle").addEventListener("input", (e)=>{setAngleZ(Number(e.target.value)); document.getElementById("zDegrees").textContent = document.getElementById("zAngle").value + " Degrees"});
 
   const canvas = document.querySelector("#gl-canvas");
   // Initialize the GL context
@@ -75,8 +82,6 @@ async function main() {
   });
 
   const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
-  
-  
 
   const cameraTarget = [0, 10, 0];
   const cameraPosition = [0, 0, 50];
@@ -88,7 +93,7 @@ async function main() {
   }
   function render(time) {
     time *= 0.001;  // convert to seconds
- 
+    //console.log("changed to " + angleX);
     webglUtils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.enable(gl.DEPTH_TEST);
@@ -116,8 +121,14 @@ async function main() {
     // calls gl.uniform
     webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
     // compute the world matrix once since all parts
-  // are at the same space.
-    const u_world = m4.yRotation(time);
+    // are at the same space.
+
+    //rotations (mostly for demo, needs to be changed)
+    let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
+    u_world = m4.xRotate(u_world, degToRad(angleX));
+    u_world = m4.yRotate(u_world, degToRad(angleY));
+    u_world = m4.zRotate(u_world, degToRad(angleZ));
+
  
     for (const {bufferInfo, material} of parts) {
     // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
@@ -137,82 +148,26 @@ async function main() {
   }
   requestAnimationFrame(render);
 }
-//
-// Initialize a shader program, so WebGL knows how to draw our data
-//
-function initShaderProgram(gl, vsSource, fsSource) {
-    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-  
-    // Create the shader program
-  
-    const shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
-  
-    // If creating the shader program failed, alert
-  
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      alert(
-        `Unable to initialize the shader program: ${gl.getProgramInfoLog(
-          shaderProgram,
-        )}`,
-      );
-      return null;
-    }
-  
-    return shaderProgram;
-  }
-  
-  //
-  // creates a shader of the given type, uploads the source and
-  // compiles it.
-  //
-  function loadShader(gl, type, source) {
-    const shader = gl.createShader(type);
-  
-    // Send the source to the shader object
-  
-    gl.shaderSource(shader, source);
-  
-    // Compile the shader program
-  
-    gl.compileShader(shader);
-  
-    // See if it compiled successfully
-  
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      alert(
-        `An error occurred compiling the shaders: ${gl.getShaderInfoLog(shader)}`,
-      );
-      gl.deleteShader(shader);
-      return null;
-    }
-  
-    return shader;
-  }
-  
 
-  function parseOBJ(text) {
-    // because indices are base 1 let's just fill in the 0th data
-    const objPositions = [[0, 0, 0]];
-    const objTexcoords = [[0, 0]];
-    const objNormals = [[0, 0, 0]];
-  
-    // same order as `f` indices
-    const objVertexData = [
-      objPositions,
-      objTexcoords,
-      objNormals,
-    ];
-  
-    // same order as `f` indices
-    let webglVertexData = [
-      [],   // positions
-      [],   // texcoords
-      [],   // normals
-    ];
+function parseOBJ(text) {
+  // because indices are base 1 let's just fill in the 0th data
+  const objPositions = [[0, 0, 0]];
+  const objTexcoords = [[0, 0]];
+  const objNormals = [[0, 0, 0]];
+
+  // same order as `f` indices
+  const objVertexData = [
+    objPositions,
+    objTexcoords,
+    objNormals,
+  ];
+
+  // same order as `f` indices
+  let webglVertexData = [
+    [],   // positions
+    [],   // texcoords
+    [],   // normals
+  ];
   const materialLibs = [];
   const geometries = [];
   let groups = ['default'];
@@ -251,81 +206,81 @@ function initShaderProgram(gl, vsSource, fsSource) {
       geometries.push(geometry);
     }
   }
-  
-    function addVertex(vert) {
-      const ptn = vert.split('/');
-      ptn.forEach((objIndexStr, i) => {
-        if (!objIndexStr) {
-          return;
-        }
-        const objIndex = parseInt(objIndexStr);
-        const index = objIndex + (objIndex >= 0 ? 0 : objVertexData[i].length);
-        webglVertexData[i].push(...objVertexData[i][index]);
-      });
-    }
-  
-    const noop = () => {};
 
-    const keywords = {
-      v(parts) {
-        setGeometry();
-        objPositions.push(parts.map(parseFloat));
-      },
-      vn(parts) {
-        objNormals.push(parts.map(parseFloat));
-      },
-      vt(parts) {
-        // should check for missing v and extra w?
-        objTexcoords.push(parts.map(parseFloat));
-      },
-      f(parts) {
-        const numTriangles = parts.length - 2;
-        for (let tri = 0; tri < numTriangles; ++tri) {
-          addVertex(parts[0]);
-          addVertex(parts[tri + 1]);
-          addVertex(parts[tri + 2]);
-        }
-      },
-      g(parts) {
-        groups = parts;
-        newGeometry()
-      },
-      s: noop,
-      mtllib(parts, unparsedArgs) {
-        materialLibs.push(unparsedArgs);
-      },
-      o(parts, unparsedArgs) {
-        object = unparsedArgs;
-        newGeometry();
-      },
-      usemtl(parts, unparsedArgs) {
-        material = unparsedArgs;
-        newGeometry();
-      },
-    };
+  function addVertex(vert) {
+    const ptn = vert.split('/');
+    ptn.forEach((objIndexStr, i) => {
+      if (!objIndexStr) {
+        return;
+      }
+      const objIndex = parseInt(objIndexStr);
+      const index = objIndex + (objIndex >= 0 ? 0 : objVertexData[i].length);
+      webglVertexData[i].push(...objVertexData[i][index]);
+    });
+  }
+
+  const noop = () => {};
+
+  const keywords = {
+    v(parts) {
+      setGeometry();
+      objPositions.push(parts.map(parseFloat));
+    },
+    vn(parts) {
+      objNormals.push(parts.map(parseFloat));
+    },
+    vt(parts) {
+      // should check for missing v and extra w?
+      objTexcoords.push(parts.map(parseFloat));
+    },
+    f(parts) {
+      const numTriangles = parts.length - 2;
+      for (let tri = 0; tri < numTriangles; ++tri) {
+        addVertex(parts[0]);
+        addVertex(parts[tri + 1]);
+        addVertex(parts[tri + 2]);
+      }
+    },
+    g(parts) {
+      groups = parts;
+      newGeometry()
+    },
+    s: noop,
+    mtllib(parts, unparsedArgs) {
+      materialLibs.push(unparsedArgs);
+    },
+    o(parts, unparsedArgs) {
+      object = unparsedArgs;
+      newGeometry();
+    },
+    usemtl(parts, unparsedArgs) {
+      material = unparsedArgs;
+      newGeometry();
+    },
+  };
   
-    const keywordRE = /(\w*)(?: )*(.*)/;
-    const lines = text.split('\n');
-    for (let lineNo = 0; lineNo < lines.length; ++lineNo) {
-      const line = lines[lineNo].trim();
-      if (line === '' || line.startsWith('#')) {
-        continue;
-      }
-      const m = keywordRE.exec(line);
-      if (!m) {
-        continue;
-      }
-      const [, keyword, unparsedArgs] = m;
-      const parts = line.split(/\s+/).slice(1);
-      const handler = keywords[keyword];
-      if (!handler) {
-        console.warn('unhandled keyword:', keyword);  // eslint-disable-line no-console
-        continue;
-      }
-      handler(parts, unparsedArgs);
+  const keywordRE = /(\w*)(?: )*(.*)/;
+  const lines = text.split('\n');
+  for (let lineNo = 0; lineNo < lines.length; ++lineNo) {
+    const line = lines[lineNo].trim();
+    if (line === '' || line.startsWith('#')) {
+      continue;
     }
-  
-      // remove any arrays that have no entries.
+    const m = keywordRE.exec(line);
+    if (!m) {
+      continue;
+    }
+    const [, keyword, unparsedArgs] = m;
+    const parts = line.split(/\s+/).slice(1);
+    const handler = keywords[keyword];
+    if (!handler) {
+      console.warn('unhandled keyword:', keyword);  // eslint-disable-line no-console
+      continue;
+    }
+    handler(parts, unparsedArgs);
+  }
+
+    // remove any arrays that have no entries.
   for (const geometry of geometries) {
     geometry.data = Object.fromEntries(
         Object.entries(geometry.data).filter(([, array]) => array.length > 0));

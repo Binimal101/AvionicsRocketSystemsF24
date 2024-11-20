@@ -12,10 +12,14 @@
             defer>
         </script>
         <script src="webgl-demo.js" type="module"></script>
-        <link rel="stylesheet" href="./webgl.css" type="text/css" />
+        <!--<link rel="stylesheet" href="./webgl.css" type="text/css" />-->
         <link rel="stylesheet" href="styles.css">
+
     </head>
     <body>
+        x angle:<input type="range" id="xAngle" min="0" max="360" value="0"> <span id="xDegrees">0 Degrees</span>
+        y angle:<input type="range" id="yAngle" min="0" max="360" value="0"> <span id="yDegrees">0 Degrees</span>
+        z angle:<input type="range" id="zAngle" min="0" max="360" value="0"> <span id="zDegrees">0 Degrees</span>
         <canvas id="gl-canvas"></canvas>
     </body>
 </html>
