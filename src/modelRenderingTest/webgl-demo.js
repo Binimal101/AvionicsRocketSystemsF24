@@ -14,8 +14,7 @@ varying vec3 v_normal;
 void main() {
   gl_Position = u_projection * u_view * u_world * a_position;
   v_normal = mat3(u_world) * a_normal;
-}
-`;
+}`;
  
 const fs = `
 precision mediump float;
@@ -29,8 +28,9 @@ void main () {
   vec3 normal = normalize(v_normal);
   float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
   gl_FragColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a);
-}
-`;
+}`;
+
+const modelPath = 'model/RocketShip.obj';
 
 main();
 
@@ -41,8 +41,7 @@ main();
 //
 async function main() {
   //loading model 
-  const response = await fetch('model/RocketShip.obj'); //RELATIVE URL...
-  const text = await response.text();
+  
 
 
   const canvas = document.querySelector("#gl-canvas");
@@ -57,50 +56,71 @@ async function main() {
     return;
   }
 
+  const response = await fetch(modelPath); //RELATIVE URL...
+  const text = await response.text();
+  const data = parseOBJ(text);
   // Set clear color to black, fully opaque
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   // Clear the color buffer with specified clear color
   gl.clear(gl.COLOR_BUFFER_BIT);
 
+  const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
+  
+  const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
 
+  const cameraTarget = [0, 10, 0];
+  const cameraPosition = [0, 0, 50];
+  const zNear = 0.1;
+  const zFar = 100;
 
-  // Vertex shader program
-    const vsSource = `
-    attribute vec4 aVertexPosition;
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
-    void main() {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    gl_Rotation
-    }
-    `;
-    const fsSource = `
-    void main() {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    }
-  `;
-  // Initialize a shader program; this is where all the lighting
-    // for the vertices and so forth is established.
-    const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-  // Collect all the info needed to use the shader program.
-    // Look up which attribute our shader program is using
-    // for aVertexPosition and look up uniform locations.
-    const programInfo = {
-        program: shaderProgram,
-        attribLocations: {
-        vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-        },
-        uniformLocations: {
-        projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-        modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
-        },
+  function degToRad(deg) {
+    return deg * Math.PI / 180;
+  }
+  function render(time) {
+    time *= 0.001;  // convert to seconds
+ 
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+ 
+    const fieldOfViewRadians = degToRad(60);
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
+ 
+    const up = [0, 1, 0];
+    // Compute the camera's matrix using look at.
+    const camera = m4.lookAt(cameraPosition, cameraTarget, up);
+ 
+    // Make a view matrix from the camera matrix.
+    const view = m4.inverse(camera);
+ 
+    const sharedUniforms = {
+      u_lightDirection: m4.normalize([-1, 3, 5]),
+      u_view: view,
+      u_projection: projection,
     };
-    // Here's where we call the routine that builds all the
-    // objects we'll be drawing.
-    const buffers = initBuffers(gl);
-
-    // Draw the scene
-    drawScene(gl, programInfo, buffers);    
+ 
+    gl.useProgram(meshProgramInfo.program);
+ 
+    // calls gl.uniform
+    webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
+ 
+    // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
+    webglUtils.setBuffersAndAttributes(gl, meshProgramInfo, bufferInfo);
+ 
+    // calls gl.uniform
+    webglUtils.setUniforms(meshProgramInfo, {
+      u_world: m4.yRotation(time),
+      u_diffuse: [1, 0.7, 0.5, 1],
+    });
+ 
+    // calls gl.drawArrays or gl.drawElements
+    webglUtils.drawBufferInfo(gl, bufferInfo);
+ 
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
 }
 //
 // Initialize a shader program, so WebGL knows how to draw our data
@@ -164,21 +184,30 @@ function initShaderProgram(gl, vsSource, fsSource) {
     const objPositions = [[0, 0, 0]];
     const objTexcoords = [[0, 0]];
     const objNormals = [[0, 0, 0]];
-   
+  
     // same order as `f` indices
     const objVertexData = [
       objPositions,
       objTexcoords,
       objNormals,
     ];
-   
+  
     // same order as `f` indices
     let webglVertexData = [
       [],   // positions
       [],   // texcoords
       [],   // normals
     ];
-   
+  
+    function newGeometry() {
+      // If there is an existing geometry and it's
+      // not empty then start a new one.
+      if (geometry && geometry.data.position.length) {
+        geometry = undefined;
+      }
+      setGeometry();
+    }
+  
     function addVertex(vert) {
       const ptn = vert.split('/');
       ptn.forEach((objIndexStr, i) => {
@@ -190,7 +219,7 @@ function initShaderProgram(gl, vsSource, fsSource) {
         webglVertexData[i].push(...objVertexData[i][index]);
       });
     }
-   
+  
     const keywords = {
       v(parts) {
         objPositions.push(parts.map(parseFloat));
@@ -199,6 +228,7 @@ function initShaderProgram(gl, vsSource, fsSource) {
         objNormals.push(parts.map(parseFloat));
       },
       vt(parts) {
+        // should check for missing v and extra w?
         objTexcoords.push(parts.map(parseFloat));
       },
       f(parts) {
@@ -210,6 +240,28 @@ function initShaderProgram(gl, vsSource, fsSource) {
         }
       },
     };
+  
+    const keywordRE = /(\w*)(?: )*(.*)/;
+    const lines = text.split('\n');
+    for (let lineNo = 0; lineNo < lines.length; ++lineNo) {
+      const line = lines[lineNo].trim();
+      if (line === '' || line.startsWith('#')) {
+        continue;
+      }
+      const m = keywordRE.exec(line);
+      if (!m) {
+        continue;
+      }
+      const [, keyword, unparsedArgs] = m;
+      const parts = line.split(/\s+/).slice(1);
+      const handler = keywords[keyword];
+      if (!handler) {
+        console.warn('unhandled keyword:', keyword);  // eslint-disable-line no-console
+        continue;
+      }
+      handler(parts, unparsedArgs);
+    }
+  
     return {
       position: webglVertexData[0],
       texcoord: webglVertexData[1],
