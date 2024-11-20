@@ -1,31 +1,31 @@
-import serial
 import reyax
-import time
 
-# Initialize UART using pyserial
-uart_port = "/dev/serial0"  # Update this to the correct port if needed
-baud_rate = 115200
+class RYLR998_Recieve:
+    def __init__(self):
+        # Initialize UART using pyserial
+        uart_port = "/dev/ttyAMA0" #RPI5 config
+        baud_rate = 115200
 
-# Create the RYLR998 object
-lora = reyax.RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
+        # Create the RYLR998 object
+        RYLR998 = reyax.RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
 
-# Test if the module is connected
-if (pulseResponse := lora.pulse()):
-    print(f"RYLR998 module is connected. Response = {pulseResponse}")
-else:
-    print(f"RYLR998 module is not responding. Response = '{pulseResponse}'")
+    def recieve(self):
+        while True:
+            received_data = self.read_data()
+            if received_data:
+                #DECODE and return to Flask scope
+                return self.decode(received_data)
+            
+    def decode(data: str) -> dict:
+        """
+        Param data: full RYLR998 response ->
+        +RCV=<Address>,<Length>,<Data>,<RSSI>,<SNR>
+        <Address> Transmitter Address ID
+        <Length> Data Length
+        **<Data> ASCll Format Data**
+        <RSSI> Received Signal Strength Indicator
+        <SNR> Signal-to-noise ratio
 
-print("\nListening for incoming transmissions...")
-
-try:
-    while True:
-        # Continuously read data from the module
-        received_data = lora.read_data()
-        if received_data:
-            print(f"Received message: {received_data}")
-        time.sleep(0.1)  # Add a slight delay to reduce CPU usage
-except KeyboardInterrupt:
-    print("\nExiting receiver script.")
-finally:
-    lora.close()
-
+        Return dict of full transmission data 
+        """
+        pass

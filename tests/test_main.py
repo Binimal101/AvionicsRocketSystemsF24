@@ -35,6 +35,7 @@ def test_get_temperature_positive(flight_data_logger, temperature, last_temperat
     (0),  # Edge case: erroneous low temperature
     (0b11111111),  # Random high value
 ])
+
 def test_get_temperature_negative(flight_data_logger, temperature):
     """Test get_temperature for erroneous cases to ensure it handles unexpected readings."""
     flight_data_logger.sensor.temperature = temperature
