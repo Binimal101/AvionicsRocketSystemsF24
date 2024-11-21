@@ -32,6 +32,55 @@ void main () {
 
 const modelPath = 'model/RocketShip.obj';
 
+async function loadRotationData(filePath) {
+  const response = await fetch(filePath);
+  const text = await response.text();
+  const rotationData = text.split('\n').map(line => {
+      const [x, y, z] = line.split(',').map(Number);
+      return { x, y, z };
+  });
+  return rotationData;
+}
+
+async function readFloatsFromFile(filePath) {
+  try {
+    const response = await fetch(filePath);
+    if (!response.ok) throw new Error("Failed to load the file");
+
+    const text = await response.text();
+
+    const floatRegex = /-?\d+(\.\d+)?/g; // Matches floats, including negatives
+    const lines = text.split("\n"); // Split file into lines
+    const results = [];
+
+    for (const line of lines) {
+      const matches = line.match(floatRegex); // Find all floats in the line
+      if (matches && matches.length >= 3) {
+        // Parse the first three floats
+        const float1 = parseFloat(matches[0]);
+        const float2 = parseFloat(matches[1]);
+        const float3 = parseFloat(matches[2]);
+        results.push({ float1, float2, float3 });
+      }
+    }
+    return results;
+  } catch (error) {
+    console.error("Error:", error.message);
+    return null;
+  }
+}
+
+const filePath = "goodData.txt";
+readFloatsFromFile(filePath).then((data) => {
+  if (!data) {
+    console.error("Error:", error.message);
+  } else {
+    console.log(data)
+  }
+});
+
+
+
 main();
 
 //
@@ -44,12 +93,24 @@ async function main() {
   var angleY = 0;
   var angleX = 0;
   var angleZ = 0;
-  function setAngleX(deg) { angleX = deg;  console.log("changed to " + angleX); return angleX;  }
+
+  const rotationData = await loadRotationData('goodData.txt');
+  if (!rotationData) {
+    console.error('Error loading rotation data');
+    return;
+  }
+  let rotationIndex = 0;
+  const totalRotationData = rotationData.length;
+  if (rotationData.length > 0) {
+    angleX = rotationData[0].x;
+    angleY = rotationData[0].y;
+    angleZ = rotationData[0].z;
+  }
+
+  // Demo controls
+  function setAngleX(deg) { angleX = deg; return angleX; }
   function setAngleY(deg) { angleY = deg; return angleY; }
   function setAngleZ(deg) { angleZ = deg; return angleZ; }
-  document.getElementById("xAngle").addEventListener("input", (e)=>{setAngleX(Number(e.target.value)); document.getElementById("xDegrees").textContent = document.getElementById("xAngle").value + " Degrees"});
-  document.getElementById("yAngle").addEventListener("input", (e)=>{setAngleY(Number(e.target.value)); document.getElementById("yDegrees").textContent = document.getElementById("yAngle").value + " Degrees"});
-  document.getElementById("zAngle").addEventListener("input", (e)=>{setAngleZ(Number(e.target.value)); document.getElementById("zDegrees").textContent = document.getElementById("zAngle").value + " Degrees"});
 
   const canvas = document.querySelector("#gl-canvas");
   // Initialize the GL context
@@ -122,9 +183,18 @@ async function main() {
     webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
     // compute the world matrix once since all parts
     // are at the same space.
+    const { x, y, z } = rotationData[rotationIndex];
+    angleX = x;
+    angleY = y;
+    angleZ = z;
 
+    // Update the rotation index to create a looping effect
+    rotationIndex = (rotationIndex + 1) % totalRotationData;
     //rotations (mostly for demo, needs to be changed)
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
+    document.getElementById("xAngle").textContent = angleX + " Degrees";
+    document.getElementById("yAngle").textContent = angleY + " Degrees";
+    document.getElementById("zAngle").textContent = angleZ + " Degrees";
     u_world = m4.xRotate(u_world, degToRad(angleX));
     u_world = m4.yRotate(u_world, degToRad(angleY));
     u_world = m4.zRotate(u_world, degToRad(angleZ));
