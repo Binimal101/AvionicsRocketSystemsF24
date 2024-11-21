@@ -189,7 +189,8 @@ async function main() {
     angleZ = z;
 
     // Update the rotation index to create a looping effect
-    rotationIndex = (rotationIndex + 1) % totalRotationData;
+    //rotationIndex = (rotationIndex + 1) % totalRotationData;
+    rotationIndex = (rotationIndex + 1);
     //rotations (mostly for demo, needs to be changed)
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
     document.getElementById("xAngle").textContent = angleX + " Degrees";
