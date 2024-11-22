@@ -1,4 +1,5 @@
-import reyax
+from reyax import RYLR998, getStartMessage
+import time
 
 class RYLR998_Recieve:
     def __init__(self):
@@ -7,7 +8,31 @@ class RYLR998_Recieve:
         baud_rate = 115200
 
         # Create the RYLR998 object
-        RYLR998 = reyax.RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
+        RYLR998 = RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
+
+    def send_start_command(self):
+        """
+        Send message to rocket to begin data_logging
+        """
+
+        message = f"AT+SEND={1},{len(getStartMessage())},{getStartMessage()}\r\n"
+        self.ser.write(message.encode())
+
+        time.sleep(0.1)
+        response = ''
+        while True:
+            if self.ser.in_waiting:
+                response += self.ser.read(self.ser.in_waiting).decode()
+                if 'OK' in response or 'ERROR' in response:
+                    break
+            else:
+                break
+        response = response.strip()
+        if 'ERROR' in response:
+            raise RuntimeError(f"Command failed: {message}, Response: {response}")
+        
+        #TODO deliver visual in outer scope to let people know launch is ready
+        return response
 
     def recieve(self):
         while True:

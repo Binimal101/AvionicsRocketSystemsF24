@@ -46,8 +46,8 @@ class MS5611(object):
     __MS5611_C4                = 0xA8
     __MS5611_C5                = 0xAA
     __MS5611_C6                = 0xAC
-    #__MS5611_D1                = 0xAC
-    #__MS5611_D2                = 0xAE
+    __MS5611_D1                = 0xAC
+    __MS5611_D2                = 0xAE
         
     def __init__(self, cs_pin, clock_pin, data_in_pin, data_out_pin, board = GPIO.BCM):
 
@@ -56,7 +56,7 @@ class MS5611(object):
         - cs_pin:    Chip Select (CS) / Slave Select (SS) pin (Any GPIO)  
         - clock_pin: Clock (SCLK / SCK) pin (Any GPIO)
         - data_in_pin:  Data input (SO / MOSI) pin (Any GPIO)
-	      - data_out_pin: Data output (MISO) pin (Any GPIO)
+	    - data_out_pin: Data output (MISO) pin (Any GPIO)
         - board:     (optional) pin numbering method as per RPi.GPIO library (GPIO.BCM (default) | GPIO.BOARD)
         '''        
         self.cs_pin = cs_pin
@@ -169,7 +169,7 @@ class MS5611(object):
     def _read_adc(self):
         GPIO.output(self.cs_pin, GPIO.LOW)
         dump = self._spixfer(self.__MS5611_ADC_READ)    # send request to read from register
-        #time.sleep(0.1)
+        time.sleep(0.1) #TODO sleep
         byteH = self._spixfer(0)    # send request to read from register
         byteM = self._spixfer(0)    # send request to read from register
         byteL = self._spixfer(0)    # send request to read from register
@@ -194,11 +194,11 @@ class MS5611(object):
         
     def update(self):
         self._refreshPressure()
-        time.sleep(0.01) # Waiting for pressure data ready
+        time.sleep(0.01) # TODO sleep | Waiting for pressure data ready
         self._readPressure()
         
         self._refreshTemperature()
-        time.sleep(0.01) # Waiting for temperature data ready
+        time.sleep(0.01) # TODO sleep | Waiting for temperature data ready
         self._readTemperature()
         
         self.calculatePressureAndTemperature()
