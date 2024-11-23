@@ -31,15 +31,122 @@ void main () {
 }`;
 
 const modelPath = 'model/RocketShip.obj';
+const filePath = "goodData.txt";
+const quat_file = "quaternion_linearized_transormations.txt";
+const framerate = 10; // 1/10 of a second.
 
 async function loadRotationData(filePath) {
   const response = await fetch(filePath);
+  const floatRegex = /-?\d+(\.\d+)/g; // Matches floats, including negatives
   const text = await response.text();
+  let count = 0;
   const rotationData = text.split('\n').map(line => {
-      const [x, y, z] = line.split(',').map(Number);
-      return { x, y, z };
+      const matches = line.match(floatRegex);
+      //the quaternion data
+      //console.log(count++);
+      //console.log(matches)
+      const [w, x, y, z] = matches.map(Number);//line.split(',').map(Number);
+      let quat = new Quaternion(w, x, y, z);
+      let eul = quat.toEulerNormalized();
+      return { x: eul.pitch, y: eul.roll, z: eul.yaw };
   });
   return rotationData;
+}
+
+class Quaternion {
+  constructor(w, x, y, z) {
+    this.w = w;
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
+
+
+  //Quaternion to Euler from Wikipedia (does NOT account for gimbal lock)
+  toEulerBasic() {
+    let angles = new Euler();
+    
+    //roll
+    let sinr_cosp = 2 * (this.w * this.x + this.y * this.z);
+    let cosr_cosp = 1 - 2 * (this.x * this.x + this.y * this.y);
+    angles.roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+    //pitch
+    let sinp = Math.sqrt(1 + 2 * (this.w * this.y - this.x * this.z));
+    let cosp = Math.sqrt(1 - 2 * (this.w * this.y - this.x * this.z));
+    angles.pitch = 2 * Math.atan2(sinp, cosp) - Math.PI / 2;
+
+    //yaw
+    let siny_cosp = 2 * (this.w * this.z + this.x * this.y);
+    let cosy_cosp = 1 - 2 * (this.y * this.y + this.z * this.z);
+    angles.yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+    return angles;
+  }
+
+  //accounting for gimbal lock (for normalized quaternions)
+  toEulerNormalized() {
+    let angles = new Euler();
+
+    let test = this.x * this.y + this.z * this.w;
+    //singularity at north pole (santa's in trouble 😱)
+    if(test > 0.499) {
+      angles.yaw = 2 * Math.atan2(this.x, this.w);
+      angles.pitch = Math.PI/2;
+      angles.roll = 0;
+    } 
+    //singularity at south pole (..evil santa is in trouble 🤨)
+    else if(test < -0.499) {
+      angles.yaw = -2 * Math.atan2(this.x, this.w);
+      angles.pitch = -Math.PI/2
+      angles.bank = 0;
+    } 
+    else {
+      let sqx = this.x * this.x;
+      let sqy = this.y * this.y;
+      let sqz = this.z * this.z;
+      angles.yaw = Math.atan2(2 * this.y * this.w - 2 * this.x * this.z, 1 - 2 * sqy - 2 * sqz);
+      angles.pitch = Math.asin(2 * test);
+      angles.roll = Math.atan2(2 * this.x * this.w - 2 * this.y * this.z, 1 - 2 * sqx - 2 * sqz);
+    }
+    return angles;
+  }
+
+  //accounting for gimbal lock (for non normalized quaternions)
+  toEulerNonNormalized() {
+    let angles = new Euler();
+    let sqx = this.x * this.x;
+    let sqy = this.y * this.y;
+    let sqz = this.z * this.z;
+    let sqw = this.w * this.w;
+    let unit = sqx + sqy + sqz + sqw;
+    let test = this.x * this.y + this.z * this.w;
+    //singularity at north pole (santa's in trouble 😱)
+    if(test > 0.499 * unit) {
+      angles.yaw = 2 * Math.atan2(this.x, this.w);
+      angles.pitch = Math.PI/2;
+      angles.roll = 0;
+    } 
+    //singularity at south pole (..evil santa is in trouble 🤨)
+    else if(test < -0.499 * unit) {
+      angles.yaw = -2 * Math.atan2(this.x, this.w);
+      angles.pitch = -Math.PI/2
+      angles.bank = 0;
+    } 
+    else {
+      angles.yaw = Math.atan2(2 * this.y * this.w - 2 * this.x * this.z, sqx - sqy - sqz + sqw);
+      angles.pitch = Math.asin(2 * test);
+      angles.roll = Math.atan2(2 * this.x * this.w - 2 * this.y * this.z, -sqx + sqy - sqz + sqw);
+    }
+    return angles;
+  }
+
+}
+
+function Euler(roll, pitch, yaw) {
+  this.roll = roll;
+  this.pitch = pitch;
+  this.yaw = yaw;
 }
 
 async function readFloatsFromFile(filePath) {
@@ -55,12 +162,13 @@ async function readFloatsFromFile(filePath) {
 
     for (const line of lines) {
       const matches = line.match(floatRegex); // Find all floats in the line
-      if (matches && matches.length >= 3) {
+      if (matches && matches.length >= 4) {
         // Parse the first three floats
         const float1 = parseFloat(matches[0]);
         const float2 = parseFloat(matches[1]);
         const float3 = parseFloat(matches[2]);
-        results.push({ float1, float2, float3 });
+        const float4 = parseFloat(matches[3]);
+        results.push({ float1, float2, float3, float4 });
       }
     }
     return results;
@@ -70,8 +178,7 @@ async function readFloatsFromFile(filePath) {
   }
 }
 
-const filePath = "goodData.txt";
-readFloatsFromFile(filePath).then((data) => {
+readFloatsFromFile(quat_file).then((data) => {
   if (!data) {
     console.error("Error:", error.message);
   } else {
@@ -94,7 +201,7 @@ async function main() {
   var angleX = 0;
   var angleZ = 0;
 
-  const rotationData = await loadRotationData('goodData.txt');
+  const rotationData = await loadRotationData(quat_file);
   if (!rotationData) {
     console.error('Error loading rotation data');
     return;
@@ -105,6 +212,10 @@ async function main() {
     angleX = rotationData[0].x;
     angleY = rotationData[0].y;
     angleZ = rotationData[0].z;
+  }
+
+  for(let dat of rotationData) {
+    console.log([radToDeg(dat.x), radToDeg(dat.y), radToDeg(dat.z)]);
   }
 
   // Demo controls
@@ -152,8 +263,20 @@ async function main() {
   function degToRad(deg) {
     return deg * Math.PI / 180;
   }
+
+  function radToDeg(radians) { 
+    const degrees = radians * (180 / Math.PI);
+    return degrees;
+  }
+  let prev = 0;
+  const fpsCounter = document.querySelector("#fps");
+  let framecounter = 0;
   function render(time) {
     time *= 0.001;  // convert to seconds
+    const deltaTime = time - prev;
+    prev = time;
+    const fps = 1/deltaTime;
+    fpsCounter.textContent = fps.toFixed(0);
     //console.log("changed to " + angleX);
     webglUtils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -190,31 +313,33 @@ async function main() {
 
     // Update the rotation index to create a looping effect
     //rotationIndex = (rotationIndex + 1) % totalRotationData;
-    rotationIndex = (rotationIndex + 1);
+    //rotationIndex = framecounter % totalRotationData;
+    rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
+    //rotationIndex = (rotationIndex + 1);
     //rotations (mostly for demo, needs to be changed)
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
-    document.getElementById("xAngle").textContent = angleX + " Degrees";
-    document.getElementById("yAngle").textContent = angleY + " Degrees";
-    document.getElementById("zAngle").textContent = angleZ + " Degrees";
-    u_world = m4.xRotate(u_world, degToRad(angleX));
-    u_world = m4.yRotate(u_world, degToRad(angleY));
-    u_world = m4.zRotate(u_world, degToRad(angleZ));
+    document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
+    document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
+    document.getElementById("zAngle").textContent = radToDeg(angleZ) + " Degrees";
+    u_world = m4.xRotate(u_world, angleX);
+    u_world = m4.yRotate(u_world, angleY);
+    u_world = m4.zRotate(u_world, angleZ);
 
  
     for (const {bufferInfo, material} of parts) {
-    // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
-    webglUtils.setBuffersAndAttributes(gl, meshProgramInfo, bufferInfo);
- 
-    // calls gl.uniform
-    webglUtils.setUniforms(meshProgramInfo, {
-      u_world,
-      u_diffuse: material.u_diffuse,
-    });
- 
-    // calls gl.drawArrays or gl.drawElements
-    webglUtils.drawBufferInfo(gl, bufferInfo);
-  }
- 
+      // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
+      webglUtils.setBuffersAndAttributes(gl, meshProgramInfo, bufferInfo);
+  
+      // calls gl.uniform
+      webglUtils.setUniforms(meshProgramInfo, {
+        u_world,
+        u_diffuse: material.u_diffuse,
+      });
+  
+      // calls gl.drawArrays or gl.drawElements
+      webglUtils.drawBufferInfo(gl, bufferInfo);
+    }
+    framecounter++;
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
