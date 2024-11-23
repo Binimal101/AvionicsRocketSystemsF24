@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Validation</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+
+        #error-message {
+            color: red;
+            font-size: 14px;
+            display: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-image: url('{{ url_for("static", filename="background-image.jpg") }}');
+            background-size: contain, cover;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: #fff; 
+            font-family: "Courier New";
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .input-container {
+            margin-bottom: 20px;
+        }
+
+        #launch-key {
+            padding: 10px;
+            width: 250px;
+            font-size: 1.2rem;
+            background-color: #1d4354;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+
+        #launch-btn {
+            padding-top:50px;
+            font-size: 1.5rem;
+            color: white;
+            background-color: #00b1e1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        #password {
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+        #launch-btn:hover {
+            background-color: #007f9e;
+        }
+
+        #header-image {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            width: 200px;
+            height: 200px;
+        }
+
+        /* Responsive Design for Mobile */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .input-container {
+                width: 100%;
+                margin: 10px;
+            }
+
+            #launch-key {
+                width: 80%;
+            }
+
+            #launch-btn {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img id="header-image" src="{{ url_for('static', filename='rocketryLogo.png') }}" alt="Header Image">
+    <h1>LOGIN PAGE</h1>
+    <label for="password">Enter Launch Key:</label>
+    <input type="password" id="password" placeholder="">
+    <button id="submit-btn">Launch</button>
+
+    <p id="error-message">This is the incorrect password</p>
+
+    <script>
+        // Connect to the Flask-SocketIO server
+        const socket = io();
+
+        // Handle button click
+        document.getElementById('submit-btn').addEventListener('click', () => {
+            const userPassword = document.getElementById('password').value;
+
+            // Emit the password to the server for validation
+            socket.emit('check_password', { password: userPassword });
+        });
+
+        // Listen for validation result
+        socket.on('validation_result', (response) => {
+            const errorMessage = document.getElementById('error-message');
+
+            if (response.success) {
+                // If password is correct, redirect to success page
+                window.location.href = '/success';  // Redirect to success page
+            } else {
+                // If password is incorrect, show error message
+                errorMessage.textContent = 'This is the incorrect password';
+                errorMessage.style.display = 'block';  // Show error message
+            }
+        });
+
+        
+    </script>
+</body>
+</html>
