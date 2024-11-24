@@ -8,24 +8,24 @@ def getStartMessage():
 def getPackFormat():
     #msb <- lsb
     #h : 2-byte short
-    #1 short for timestamp, size = 2-bytes * 4 num on the rest for n=0 -> n=8 (w_n,x_n,y_n,z_n)
+    #1 short for time_delta, size = 2-bytes * 4 num on the rest for n=0 -> n=8 (w_n,x_n,y_n,z_n)
     return ">hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"
 
-#TIMESTAMP (EN/DE)CODING
+#TIME DELTA (EN/DE)CODING
 
-def timestamp_to_short(timestamp):
+def time_delta_to_short(time_delta):
     """
-    Converts a timestamp with 2 decimal places to a signed 16-bit short.
-    The input timestamp must be in seconds and within the range [-32.768, 32.767].
+    Converts a time_delta with 3 decimal places to a signed 16-bit short.
+    The input time_delta must be in seconds and within the range [-32.768, 32.767].
     """
-    scaled = int(round(timestamp * 100))  # Scale
+    scaled = int(round(time_delta * 1000))  # Scale
     return max(-32768, min(32767, scaled))  # Clip to 16-bit short range
 
-def short_to_timestamp(short_value):
+def short_to_time_delta(short_value):
     """
-    Converts a signed 16-bit short back to a timestamp with 2 decimal places.
+    Converts a signed 16-bit short back to a time_delta with 2 decimal places.
     """
-    return short_value / 100.0  # Convert back to seconds
+    return short_value / 1000.0  # Convert back to seconds
 
 #QUATERNION (EN/DE)CODING
 
@@ -58,6 +58,9 @@ class RYLR998:
         """
         Initialize the serial connection and configure the module's address and network ID if provided.
         """
+        
+        #all sleeps are threaded in setup_hardware on RPI02W.py
+
         self.ser = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
         time.sleep(1)  # Allow time for the serial connection to initialize
 
@@ -83,10 +86,13 @@ class RYLR998:
         """
         print("Configuring RYLR998...")
 
-        # Frequency band: 905 MHz (US ISM band)
+        # Frequency band: 905 MHz
         self.send_command('AT+FREQ=905000000')
 
-        # Spreading factor: SF8
+        # Preamble length: 12
+        self.send_command('AT+PREAMBLE=12')
+
+        # Spreading factor: SF7
         self.send_command('AT+SF=7')
 
         # Bandwidth: 500 kHz
@@ -95,21 +101,18 @@ class RYLR998:
         # Error correcting bits : bits 4/(1+CR)
         self.send_command('AT+CR=2')
 
-        # Preamble length: 12
-        self.send_command('AT+PREAMBLE=12')
-
         # Transmission power: 14 dBm
         self.send_command('AT+CRFOP=17')
 
         print("Config complete.")
     
-    def send_command(self, command):
+    def send_command(self, command): #TODO is it more efficient to disregard ser.read and send ignorantly?
         """
         Send an AT command and return the response.
         """
         full_command = f'{command}\r\n'
         self.ser.write(full_command.encode())
-        time.sleep(0.1)
+        time.sleep(0.01)
         response = ''
         while True:
             if self.ser.in_waiting:
@@ -149,12 +152,13 @@ class RYLR998:
                 response = self.ser.readline()
 
                 if response:
-                    start_index, end_index, cur_index = 0, 0, 0
+                    start_index, end_index = 0, 0
 
                     #1
                     comma_ct = 0
-                    for byte in response:
-                        if byte == b',':
+                    cur_index = 0
+                    for byte in response: #type(byte) is int
+                        if byte == ord(','):
                             comma_ct += 1
                         if comma_ct == 2:
                             start_index = cur_index + 1
@@ -163,11 +167,12 @@ class RYLR998:
 
                     #2
                     comma_ct = 0
+                    cur_index = 0
                     for byte in response[::-1]:
-                        if byte == b',':
+                        if byte == ord(','):
                             comma_ct += 1
                         if comma_ct == 2:
-                            end_index = len(response) - 2 - cur_index #TODO unit test for edge case to check -1 vs -2
+                            end_index = len(response) - cur_index - 1
                             break
                         cur_index += 1     
                     
@@ -175,7 +180,7 @@ class RYLR998:
                     data = struct.unpack(getPackFormat(), response[start_index:end_index])
 
                     #4                    
-                    payload.append(short_to_timestamp(data[0])) #timestamp
+                    payload.append(short_to_time_delta(data[0])) #time_delta
                     for i in range(1, len(data), 4): #(w_n, x_n, y_n, z_n)
                         payload.append({
                             "rotation_w" : short_to_quaternion(data[i]),
@@ -186,17 +191,17 @@ class RYLR998:
 
                     #5!
                     return payload
-            time.sleep(0.1) #TODO rearrange sleep commands for optimal performance
+                time.sleep(0.0001)
         
 
-    def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2, ):
+    def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2):
         """
         Send a bytestring to recipient (reciever_address=2 | RPI5) and return the response.
         """
         data = (f"AT+SEND={recipient_address},{dataSize},").encode() + data + "\r\n".encode()
         self.ser.write(data)
 
-        time.sleep(0.1) #TODO rearrange sleep commands for optimal performance
+        time.sleep(0.01) #TODO rearrange sleep commands for optimal performance
         
         response = ''
         while True:

@@ -8,49 +8,27 @@ class RYLR998_Recieve:
         baud_rate = 115200
 
         # Create the RYLR998 object
-        RYLR998 = RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
+        self.RYLR998 = RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
 
-    def send_start_command(self):
+    def send_start_command(self, RPI02W_address: int = 1):
         """
         Send message to rocket to begin data_logging
         """
 
-        message = f"AT+SEND={1},{len(getStartMessage())},{getStartMessage()}\r\n"
-        self.ser.write(message.encode())
-
-        time.sleep(0.1)
-        response = ''
-        while True:
-            if self.ser.in_waiting:
-                response += self.ser.read(self.ser.in_waiting).decode()
-                if 'OK' in response or 'ERROR' in response:
-                    break
-            else:
-                break
-        response = response.strip()
-        if 'ERROR' in response:
-            raise RuntimeError(f"Command failed: {message}, Response: {response}")
+        message = f"AT+SEND={RPI02W_address},{len(getStartMessage())},{getStartMessage()}\r\n"
+        response = self.RYLR998.send_command(message)
         
         #TODO deliver visual in outer scope to let people know launch is ready
         return response
 
     def recieve(self):
-        while True:
-            received_data = self.read_data()
-            if received_data:
-                #DECODE and return to Flask scope
-                return self.decode(received_data)
-            
-    def decode(data: str) -> dict:
         """
-        Param data: full RYLR998 response ->
-        +RCV=<Address>,<Length>,<Data>,<RSSI>,<SNR>
-        <Address> Transmitter Address ID
-        <Length> Data Length
-        **<Data> ASCll Format Data**
-        <RSSI> Received Signal Strength Indicator
-        <SNR> Signal-to-noise ratio
-
-        Return dict of full transmission data 
+        reads a payload of a time delta, and 8 quaternions
+        timeDelta: {
+            "rotation_w" : short_to_quaternion(data[i]),
+            "rotation_x" : short_to_quaternion(data[i+1]),
+            "rotation_y" : short_to_quaternion(data[i+2]),
+            "rotation_z" : short_to_quaternion(data[i+3])
+        }, ...
         """
-        pass
+        return self.RYLR998.read_decoded_data()

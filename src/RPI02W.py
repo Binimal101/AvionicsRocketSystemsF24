@@ -10,6 +10,13 @@ import board, adafruit_bno055
 from altimeter import MS5611
 from transmit import RYLR998_Transmit
 
+seaLevelPressure = 101.7 #TODO edit src to be accurate of sea-level pressure day-of
+
+#sleep timers
+data_collection_sleep_timer = 0.01
+altimeter_update_sleep_timer = 0.02
+sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer]
+
 class FlightDataLogger:
     """Class to collect and log flight data from sensors."""
 
@@ -31,6 +38,7 @@ class FlightDataLogger:
 
         self.measurement_cycle = 0 # incremented when measurements are taken locally
         self.measurement_modulo = 5 # used to add every nth measurement to transmission payload
+        self.measurement_modulo_modifier = 0 #will modify measurement_modulo after last payload finishes
 
         #for when data collection is faster than data transmission, put items in a buffer to get sent over
         self.transmit_buffer = queue.Queue() #Holds all packets which, in order, will be sent to RPI5
@@ -61,29 +69,35 @@ class FlightDataLogger:
             self.gyro_last_temperature_reading = 0xFFFF
             
             # Use the create method to instantiate MS5611
-            self.altimeter = MS5611.create(cs_pin, clock_pin, data_in_pin, data_out_pin)
+            self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
 
             self.ms.update()
             time.sleep(0.1) # allows sensor to breathe
 
-        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro, init_altimeter)]
+        self.altimeter_update_thread = threading.Thread(target=init_altimeter)
+        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro)] + [self.altimeter_update_thread]
         #works through the sleepiness of the configurations for each module to lessen start timer
         [x.start() for x in threads]
         return threads
     
     def transmitFromBuffer(self, qbuff: queue.Queue):
-        while True:
-            time.sleep(0.1) #TODO manage sleep counters on program scope
+        while qbuff.empty():
+            pass
+
+        while True: #queue buffer starts nonempty
+
             if qbuff.empty():
                 # -= 1 to narrow into an "ideal value" given that the pattern for control-flow
                 # execution may oscillate 
-                self.measurement_modulo -= 1 #make modulo buffer smaller for faster data collection to sync with speed of transmission
+
+                time.sleep(0.1) #TODO test optimal value to avoid overflowing oscillatory patterns
+                self.measurement_modulo_modifier -= 1 #make modulo buffer smaller for faster data collection to sync with speed of transmission
                 continue
 
-            timestamp, quaternions = qbuff.get()
-            self.radio.send(timestamp=timestamp, data_points=quaternions)
+            time_delta, quaternions = qbuff.get()
+            self.radio.send(time_delta=time_delta, data_points=quaternions)
 
-    def transmit(self, timestamp: int, quaternion: list): #will change layout in the future when we get better radios
+    def transmit(self, time_delta: int, quaternion: list): #will change layout in the future when we get better radios
         """
         doesn't actually transmit, but takes quaternion and adds it to a payload to be sent later
         if payload is full, gets put into a queue for transmission from a separate process
@@ -93,17 +107,22 @@ class FlightDataLogger:
         """
 
         if not len(self.transmit_payload): #first quaternion in the first payload
-            self.transmit_payload.append(timestamp)
+            self.transmit_payload.append(time_delta)
         
-        if len(self.transmit_payload) > self.transmit_payload_limit: #len(quaternions) == 8    
+        if len(self.transmit_payload) > self.transmit_payload_limit: #payload full, prepare 2 send  
             if self.transmit_buffer.qsize() > self.transmit_buffer_limit:
                 #dynamically resize the modulus for collecting data points to uniformly slow 
                 #transmission while allowing for smooth interpolation
-                self.measurement_modulo += 2 
+
+                self.measurement_modulo += 2
+
+            #modifications to modulo from RYLR998 process-scope
+            self.measurement_modulo += self.measurement_modulo_modifier
+            self.measurement_modulo_modifier = 0 
 
             #attempt to transmit and reset payload for next data
             self.transmit_buffer.put(self.transmit_payload)
-            self.transmit_payload = [timestamp, quaternion]
+            self.transmit_payload = [time_delta, quaternion]
         else:
             #add to payload
             self.transmit_payload.append(quaternion)
@@ -164,14 +183,14 @@ class FlightDataLogger:
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
 
                 # Capture altimeter pressure and calculate altitude.
+                self.altimeter_update_thread.join() #hacky, but since update takes .2 seconds to sleep, thread it and join here
 
-                self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
+                self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                 self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(101.7)
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(seaLevelPressure)
                 
-                self.altimeter.update()
-                
-                # Take a photo and add its path to 'imageLocation'.
+                self.altimeter_update_thread = threading.Thread(target=self.altimeter.update())
+                self.altimeter_update_thread.start()
                 
                 pprint(self.flight_package)  # Print the flight package to the console for debugging
 
@@ -182,9 +201,13 @@ class FlightDataLogger:
 
                 # Add radio transmission for flightPackage every n measurement cycles (self.measurement_modulo is dynamic)
                 if self.measurement_cycle % self.measurement_modulo == 0:
-                    self.transmit(self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
+                    #time delta, data
+                    self.transmit(self.measurement_modulo * sum(sleep_timers), self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
                 
-                time.sleep(0.25)  # TODO change sleep cycle for deployment | Delay between data collection cycles
+                self.measurement_cycle += 1  # Increment the measurement cycle counter
+
+                #Delay between data collection cycles to allow gyro refresh
+                time.sleep(data_collection_sleep_timer)
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger

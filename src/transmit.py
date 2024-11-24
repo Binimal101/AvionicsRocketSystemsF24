@@ -1,4 +1,4 @@
-from reyax import RYLR998, getPackFormat, getStartMessage, quaternion_to_short, short_to_quaternion, timestamp_to_short
+from reyax import RYLR998, getPackFormat, getStartMessage, quaternion_to_short, time_delta_to_short
 import struct
 
 class RYLR998_Transmit:
@@ -19,22 +19,19 @@ class RYLR998_Transmit:
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
                 return True
 
-    def send(self, timestamp, data_points: list) -> bool:
-        #GATHER DATAPOINTS
-        bytestr = self.encode(timestamp, data_points)
+    def send(self, time_delta, data_points: list) -> bool:
+        bytestr = self.encode(time_delta, data_points)
         return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat))
 
-    def encode(original_timestamp: int, data_points: list) -> bytes:
+    def encode(time_delta: int, data_points: list) -> bytes:
         """
-        Through calculations we expect len(datapoints) == 13, although there are ONLY 12 data points
+        Through calculations we expect len(datapoints) == 9, although there are ONLY 8 data points
         
         data_points == [
             dp0, dp1, ... dp11,
         ]
-        """
         
-        """
-        original_timestamp: delta-epoch time in seconds
+        time_delta: estimated time between quaternions in seconds
 
         Param dp: will have...
         (
@@ -62,7 +59,7 @@ class RYLR998_Transmit:
         for dp in data_points:
             encodable_array.extend([quaternion_to_short(x) for x in dp])
 
-        payload = struct.pack(getPackFormat(), timestamp_to_short(original_timestamp), *encodable_array)
+        payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
 
         print(payload)
         return payload
