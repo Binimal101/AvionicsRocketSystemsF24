@@ -214,9 +214,9 @@ async function main() {
     angleZ = rotationData[0].z;
   }
 
-  /*for(let dat of rotationData) {
+  for(let dat of rotationData) {
     console.log([radToDeg(dat.x), radToDeg(dat.y), radToDeg(dat.z)]);
-  }*/
+  }
 
   // Demo controls
   function setAngleX(deg) { angleX = deg; return angleX; }
@@ -314,18 +314,7 @@ async function main() {
     // Update the rotation index to create a looping effect
     //rotationIndex = (rotationIndex + 1) % totalRotationData;
     //rotationIndex = framecounter % totalRotationData;
-    
-    //rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
-    
-    let tempW = Number(document.getElementById("input_data").getAttribute("w_in"));
-    let tempX = Number(document.getElementById("input_data").getAttribute("x_in"));
-    let tempY = Number(document.getElementById("input_data").getAttribute("y_in"));
-    let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
-    let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
-    let tempeul = tempquat.toEulerNormalized();
-    angleX = tempeul.pitch;
-    angleY = tempeul.roll;
-    angleZ = tempeul.yaw;
+    rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
     //rotationIndex = (rotationIndex + 1);
     //rotations (mostly for demo, needs to be changed)
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
