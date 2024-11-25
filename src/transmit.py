@@ -1,25 +1,65 @@
-import reyax
+from reyax import RYLR998, getPackFormat, getStartMessage, quaternion_to_short, time_delta_to_short
+import struct
 
-class RYLR998_Recieve:
+class RYLR998_Transmit:
     def __init__(self):
         # Initialize UART using pyserial
         uart_port = "/dev/serial0" #RPI02W
         baud_rate = 115200
 
         # Create the RYLR998 object
-        lora = reyax.RYLR998(uart_port, baud_rate, 1, address=1, network_id=1)
+        self.lora = RYLR998(uart_port, baud_rate, 1, address=1, network_id=1)
+        
+    def wait_for_start_message(self):
+        print("WAITING FOR START COMMAND FROM BASE CONTROL...")
+        while True: #blocks data collection execution in outer scope
+            received_data = self.read_data()
+            if received_data and received_data == getStartMessage():
+                #DECODE and return to Flask scope
+                print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
+                return True
 
-    def encode(data: dict) -> str: #might return bytestring, research
-        """
-        Param data: will have...
-        {
-            rotation : [(-pi, pi), (-pi, pi), (-pi, pi)], #roll, pitch, yaw | WRT gyro NOT rocket | radians
-            rotation_velocity : [s_float_32, s_float_32, s_float_32], #roll, pitch, yaw | WRT gyro NOT rocket | radians/sec
-            lin_acceleration : [s_float_32, s_float_32, s_float_32], #x, y, z | WRT gyro NOT rocket | m/s^2
-            temperature : us_float_32, #degrees F
-            pressure : us_float_32, #pascals
-            altitude : float_32, #meters
+    def send(self, time_delta, data_points: list) -> bool:
+        bytestr = self.encode(time_delta, data_points)
+        return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat))
 
-        }
+    def encode(time_delta: int, data_points: list) -> bytes:
         """
-        pass
+        Through calculations we expect len(datapoints) == 9, although there are ONLY 8 data points
+        
+        data_points == [
+            dp0, dp1, ... dp11,
+        ]
+        
+        time_delta: estimated time between quaternions in seconds
+
+        Param dp: will have...
+        (
+            rotation_w | (-1, 1) | WRT gyro NOT rocket | radians
+            rotation_x | (-1, 1) | WRT gyro NOT rocket | radians
+            rotation_y | (-1, 1) | WRT gyro NOT rocket | radians
+            rotation_z | (-1, 1) | WRT gyro NOT rocket | radians
+        )
+
+        REWRITE DATA TO INTEGERS FOR SENDING | DIVIDE EQUALLY FOR RECIEVING
+
+        [
+            time_stamp:16bit, 
+            (w:16bit, x:16bit, y:16bit, z:16bit), 
+            (w2:16bit, x2:16bit, y2:16bit, z2:16bit), 
+            (w3:16bit, x3:16bit, y3:16bit, z3:16bit), 
+            (w4:16bit, x4:16bit, y4:16bit, z4:16bit),
+            ...
+            (w8:16bit, x8:16bit, y8:16bit, z8:16bit)
+        ]
+        """
+
+        #build encodable array
+        encodable_array = []
+        for dp in data_points:
+            encodable_array.extend([quaternion_to_short(x) for x in dp])
+
+        payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
+
+        print(payload)
+        return payload

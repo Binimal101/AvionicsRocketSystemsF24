@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from main import FlightDataLogger  # Import from main.py where FlightDataLogger is defined
+from RPI02W import FlightDataLogger  # Import from main.py where FlightDataLogger is defined
 
 @pytest.fixture
 def flight_data_logger():
