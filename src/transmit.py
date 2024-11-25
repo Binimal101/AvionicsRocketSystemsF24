@@ -1,5 +1,5 @@
 from reyax import RYLR998, getPackFormat, getStartMessage, quaternion_to_short, time_delta_to_short
-import struct
+import struct, time
 
 class RYLR998_Transmit:
     def __init__(self):
@@ -14,11 +14,21 @@ class RYLR998_Transmit:
         print("WAITING FOR START COMMAND FROM BASE CONTROL...")
         while True: #blocks data collection execution in outer scope
             received_data = self.read_data()
-            if received_data and received_data == getStartMessage():
+            if received_data and getStartMessage() in received_data:
                 #DECODE and return to Flask scope
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
-                return True
+                return True #TODO PARSE for and ADD regional sea-level baro pressure
 
+    def read_data(self):
+        """
+        Read a line of data.
+        """
+        while True:
+            if self.ser.in_waiting:
+                response = self.ser.readline().decode().strip()
+                if response:
+                    return response.split(",")[2] #TODO check if always <data> block
+            
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)
         return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat))

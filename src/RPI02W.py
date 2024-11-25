@@ -3,19 +3,20 @@ This module handles the collection and logging of flight data from sensors.
 It retrieves sensor data and writes it to a log file for later analysis.
 """
 from pprint import pprint
-import math, json, time, numpy, os
+import json, time, os, datetime
 import threading, multiprocessing, queue
 import board, adafruit_bno055
 
 from altimeter import MS5611
 from transmit import RYLR998_Transmit
+from reyax import getNumQuaternions
 
 seaLevelPressure = 101.7 #TODO edit src to be accurate of sea-level pressure day-of
 
 #sleep timers
 data_collection_sleep_timer = 0.01
 altimeter_update_sleep_timer = 0.02
-sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer]
+sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
 
 class FlightDataLogger:
     """Class to collect and log flight data from sensors."""
@@ -29,6 +30,10 @@ class FlightDataLogger:
         thread_queue = self.setup_hardware() #avoids b2b sleep hassle for setting up configs
         [x.join() for x in thread_queue]
 
+        #needs to be here after init_altimeter is joined
+        self.altimeter_update_thread = threading.Thread(target=self.altimeter.update()) #starts variable in this scope so that it is initialized in read-scope
+        self.altimeter_update_thread.start() #joined in main readloop
+        
         self.flight_package = {
             "imageLocation": None,  # Location of the image (if captured during flight)
             "gyro": {},  # Dictionary to hold gyroscope data
@@ -45,7 +50,7 @@ class FlightDataLogger:
         self.transmit_buffer_limit = 2 # IF PASSED, LOGIC WILL BE SETUP TO INCREASE MEASUREMENT_MODULO
 
         self.transmit_payload = [] # contains one packet to send to RPI5
-        self.transmit_payload_limit = 8 # small enough payload that will allow for less time spent wt preamble
+        self.transmit_payload_limit = getNumQuaternions() # small enough payload that will allow for less time spent wt preamble
 
     def setup_hardware(self):
         #****RADIO****
@@ -56,30 +61,34 @@ class FlightDataLogger:
         def init_gyro():
             self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
             self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
+            
+            # This variable holds the last temperature reading to prevent erroneous readings
+            self.gyro_last_temperature_reading = 0xFFFF
         
         #****ALTIMETER****
         def init_altimeter():
             # Configure GPIO pins
-            cs_pin = 24
+            cs_pin = 22
             clock_pin = 11
             data_in_pin = 9
             data_out_pin = 10
 
-            # This variable holds the last temperature reading to prevent erroneous readings
-            self.gyro_last_temperature_reading = 0xFFFF
-            
             # Use the create method to instantiate MS5611
             self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
 
-            self.ms.update()
+            self.altimeter.update()
             time.sleep(0.1) # allows sensor to breathe
 
-        self.altimeter_update_thread = threading.Thread(target=init_altimeter)
-        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro)] + [self.altimeter_update_thread]
+        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
         #works through the sleepiness of the configurations for each module to lessen start timer
         [x.start() for x in threads]
         return threads
     
+    def wait_for_start_signal(self):
+        #blocks main process until signal recieved
+        response = self.radio.wait_for_start_message()
+        #TODO parse response for seaLevelPressure?
+
     def transmitFromBuffer(self, qbuff: queue.Queue):
         while qbuff.empty():
             pass
@@ -103,7 +112,9 @@ class FlightDataLogger:
         if payload is full, gets put into a queue for transmission from a separate process
         
         sends to RPI5_encode in format:
-        [ts, qt1: list, qt2: list, ... qt8: list]
+        [td, qt1: list, qt2: list, ... qt8: list]
+
+        time delta is for specific data point, average the running time deltas for better approximations
         """
 
         if not len(self.transmit_payload): #first quaternion in the first payload
@@ -126,6 +137,10 @@ class FlightDataLogger:
         else:
             #add to payload
             self.transmit_payload.append(quaternion)
+            
+            #average existing time delta (theoretically equivalent, experimentally variable)
+            #will be redundant on first transmit() of each payload as 2*time_delta/2 is silly logic 
+            self.transmit_payload[0] = (self.transmit_payload[0] + time_delta) / 2
 
     def get_temperature(self):
         result = self.gyroscope.temperature  # Get the current temperature from the sensor
@@ -150,14 +165,14 @@ class FlightDataLogger:
         main_scope_dir = os.path.abspath(os.path.join(current_file_dir, ".."))
 
         # Create a file in the "main scope"
-        self.start_time = time.time()
-        file_path = os.path.join(main_scope_dir, f"flightLogs/{str(int(self.start_time))}/logfile.txt")
+        file_path = os.path.join(main_scope_dir, f"flightLogs/{datetime.date.today().strftime("%m-%d-%Y")}/logfile.txt")
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         #begin data transmission process to run concurrently and more efficiently than in the downtime of GIL 
         self.transmit_process = multiprocessing.Process(target=self.transmitFromBuffer, args=(self.transmit_buffer))
         self.transmit_process.start()     
 
+        start_payload_time, self.start_time = [time.time() for x in range(2)] #used to measure time delta
         # Open a log file to store flight data, using the current date for naming
         with open(f"file_path", "a") as file:
             while True:  # Main loop for continuous data collection
@@ -173,7 +188,7 @@ class FlightDataLogger:
                 self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
                 self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
                 
-                if not all(self.flight_package["gyro"]["quaternion"], self.flight_package["gyro"]["euler"]):
+                if len([x for x in [*self.flight_package["gyro"]["quaternion"], *self.flight_package["gyro"]["euler"]] if x is None]):
                     continue #NoneType encountered in readloop
                 
                 self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
@@ -195,14 +210,14 @@ class FlightDataLogger:
                 pprint(self.flight_package)  # Print the flight package to the console for debugging
 
                 # Write the flight package as JSON to the log file
-                json_data = json.dumps(self.flight_package) + ", "
+                json_data = json.dumps(self.flight_package) + ",\n"
                 
                 file.write(json_data)  # Append the JSON data to the log file
 
                 # Add radio transmission for flightPackage every n measurement cycles (self.measurement_modulo is dynamic)
                 if self.measurement_cycle % self.measurement_modulo == 0:
-                    #time delta, data
-                    self.transmit(self.measurement_modulo * sum(sleep_timers), self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
+                    #time delta (for one measurement in payload), data
+                    self.transmit(start_payload_time - (start_payload_time := time.time()), self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
                 
                 self.measurement_cycle += 1  # Increment the measurement cycle counter
 
