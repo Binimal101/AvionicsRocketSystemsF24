@@ -9,7 +9,8 @@ class RYLR998_Transmit:
 
         # Create the RYLR998 object
         self.lora = RYLR998(uart_port, baud_rate, 1, address=1, network_id=1)
-        
+        self.ser = self.lora.ser # for more direct access to device
+
     def wait_for_start_message(self):
         print("WAITING FOR START COMMAND FROM BASE CONTROL...")
         while True: #blocks data collection execution in outer scope
@@ -27,7 +28,9 @@ class RYLR998_Transmit:
             if self.ser.in_waiting:
                 response = self.ser.readline().decode().strip()
                 if response:
-                    return response.split(",")[2] #TODO check if always <data> block
+                    print(response)
+                    if "," in response:
+                        return response.split(",")[2] #TODO check if always <data> block
             
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)

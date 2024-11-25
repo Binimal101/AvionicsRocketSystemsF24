@@ -165,7 +165,7 @@ class FlightDataLogger:
         main_scope_dir = os.path.abspath(os.path.join(current_file_dir, ".."))
 
         # Create a file in the "main scope"
-        file_path = os.path.join(main_scope_dir, f"flightLogs/{datetime.date.today().strftime("%m-%d-%Y")}/logfile.txt")
+        file_path = os.path.join(main_scope_dir, f"flightLogs/{datetime.date.today().strftime('%m-%d-%Y')}/logfile.txt")
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         #begin data transmission process to run concurrently and more efficiently than in the downtime of GIL 
@@ -228,6 +228,6 @@ if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
     
     #will block main thread until recieved go command from base control
-    logger.wait_for_start()
+    logger.wait_for_start_signal()
 
     logger.log_flight_data()  # Start logging flight data & begin sub process for transmission 

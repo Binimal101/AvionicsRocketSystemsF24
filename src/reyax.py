@@ -122,7 +122,7 @@ class RYLR998:
         """
         full_command = f'{command}\r\n'
         self.ser.write(full_command.encode())
-        time.sleep(0.01)
+        time.sleep(0.05)
         response = ''
         while True:
             if self.ser.in_waiting:

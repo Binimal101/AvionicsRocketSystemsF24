@@ -8,6 +8,7 @@ class RYLR998_Recieve:
 
         # Create the RYLR998 object
         self.RYLR998 = RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
+        self.ser = self.RYLR998.ser
 
     def send_start_command(self, RPI02W_address: int = 1):
         """
