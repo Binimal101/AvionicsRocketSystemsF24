@@ -10,13 +10,14 @@ class RYLR998_Recieve:
         self.RYLR998 = RYLR998(uart_port, baud_rate, 1, address=2, network_id=1)  # Assuming address 2 for receiving
         self.ser = self.RYLR998.ser
 
-    def send_start_command(self, RPI02W_address: int = 1):
+    def send_start_command(self, pressure: float, RPI02W_address: int = 1):
         """
         Send message to rocket to begin data_logging
         """
         #TODO add sea-level baro pressure to start command payload for finer tuning
- 
-        message = f"AT+SEND={RPI02W_address},{len(getStartMessage())},{getStartMessage()}\r\n"
+
+        pressure_payload = str(pressure)
+        message = f"AT+SEND={RPI02W_address},{len(getStartMessage()) + len(pressure_payload)},{getStartMessage() + pressure_payload}\r\n"
         response = self.RYLR998.send_command(message)
         
         #TODO either wait for response back OR just sleep to ensure logging started before starting visual
@@ -26,6 +27,11 @@ class RYLR998_Recieve:
         """
         reads a payload of a time delta, and 8 quaternions
         timeDelta, {
+            "rotation_w" : short_to_quaternion(data[i]),
+            "rotation_x" : short_to_quaternion(data[i+1]),
+            "rotation_y" : short_to_quaternion(data[i+2]),
+            "rotation_z" : short_to_quaternion(data[i+3])
+        }, {
             "rotation_w" : short_to_quaternion(data[i]),
             "rotation_x" : short_to_quaternion(data[i+1]),
             "rotation_y" : short_to_quaternion(data[i+2]),

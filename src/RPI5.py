@@ -28,19 +28,12 @@ def checkPass(data):
     user_password = data.get('password', '')
     if user_password == password:
         emit('validation_result', {'success': True})
+        print("sending start")
         lora.send_start_command(int(data.get('sea_level_pressure', 101.7)))
+        print("ending send start")
         # TODO emit a second flag to let FE know to switch over to visualization that LoRa has successfully 
-        # started data collection
     else:
         emit('validation_result', {'success': False})
-
-def get_payload_data():
-    data = [
-        {'ts': 1.00000000, 'x': 0.12345678, 'y': -0.87654321, 'w': 0.65432109, 'z': -0.43210987},
-        {'ts': 2.00000000, 'x': -0.56789012, 'y': 0.34567891, 'w': -0.23456789, 'z': 0.98765432},
-        {'ts': 3.00000000, 'x': 0.87654321, 'y': -0.12345678, 'w': 0.54321098, 'z': -0.67890123}
-    ]
-    return data
 
 # Handle messages from the client
 @socketio.on('message')
