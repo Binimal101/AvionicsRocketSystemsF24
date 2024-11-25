@@ -1,5 +1,4 @@
 from reyax import RYLR998, getStartMessage
-import time
 
 class RYLR998_Recieve:
     def __init__(self):
@@ -14,17 +13,18 @@ class RYLR998_Recieve:
         """
         Send message to rocket to begin data_logging
         """
-
+        #TODO add sea-level baro pressure to start command payload for finer tuning
+ 
         message = f"AT+SEND={RPI02W_address},{len(getStartMessage())},{getStartMessage()}\r\n"
         response = self.RYLR998.send_command(message)
         
-        #TODO deliver visual in outer scope to let people know launch is ready
+        #TODO either wait for response back OR just sleep to ensure logging started before starting visual
         return response
 
     def recieve(self):
         """
         reads a payload of a time delta, and 8 quaternions
-        timeDelta: {
+        timeDelta, {
             "rotation_w" : short_to_quaternion(data[i]),
             "rotation_x" : short_to_quaternion(data[i+1]),
             "rotation_y" : short_to_quaternion(data[i+2]),

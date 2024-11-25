@@ -13,6 +13,13 @@
             display: none;
         }
 
+        #success-message {
+            color: green;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -62,10 +69,17 @@
             cursor: pointer;
             transition: 0.3s;
         }
+
         #password {
             margin-top: 10px;
             margin-bottom: 15px;
         }
+        
+        #sea-level-pressure {
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
         #launch-btn:hover {
             background-color: #007f9e;
         }
@@ -103,11 +117,16 @@
 <body>
     <img id="header-image" src="{{ url_for('static', filename='rocketryLogo.png') }}" alt="Header Image">
     <h1>LOGIN PAGE</h1>
-    <label for="password">Enter Launch Key:</label>
+    <label for="password">Launch Key</label>
     <input type="password" id="password" placeholder="">
+
+    <label for="sea-level-pressure">Regional Sea Level Pressure (kPa)</label>
+    <input id="sea-level-pressure" placeholder="">
+
     <button id="submit-btn">Launch</button>
 
-    <p id="error-message">This is the incorrect password</p>
+    <p id="error-message"></p>
+    <p id="success-message"></p>
 
     <script>
         // Connect to the Flask-SocketIO server
@@ -116,25 +135,31 @@
         // Handle button click
         document.getElementById('submit-btn').addEventListener('click', () => {
             const userPassword = document.getElementById('password').value;
-
-            // Emit the password to the server for validation
-            socket.emit('check_password', { password: userPassword });
+            const userSeaLevelPressure = document.getElementById('sea-level-pressure').value;
+            
+            // Emit the password to the server for validation, sea level pressure for calibration
+            socket.emit('check_password', { password: userPassword, sea_level_pressure: userSeaLevelPressure });
         });
 
         // Listen for validation result
         socket.on('validation_result', (response) => {
+            const successMessage = document.getElementById('success-message');
             const errorMessage = document.getElementById('error-message');
 
             if (response.success) {
                 // If password is correct, redirect to success page
+                errorMessage.style.display = 'none';  // Hide error message
+
+                successMessage.textContent = 'Login Successful, Setting Up Systems...'
+                successMessage.style.display = 'block';  // Show success message
+                /* in anticipation of having to foster a delay before redirecting */
                 window.location.href = '/success';  // Redirect to success page
             } else {
                 // If password is incorrect, show error message
-                errorMessage.textContent = 'This is the incorrect password';
+                errorMessage.textContent = 'Incorrect Password, This Will Be Logged';
                 errorMessage.style.display = 'block';  // Show error message
             }
         });
-
         
     </script>
 </body>
