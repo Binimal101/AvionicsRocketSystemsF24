@@ -19,7 +19,8 @@ class RYLR998_Transmit:
                 #DECODE and return to Flask scope
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
                 return True #TODO PARSE for and ADD regional sea-level baro pressure
-
+            if recieved_data:
+                print(f"recieved: {recieved_data}")
     def read_data(self):
         """
         Read a line of data.
