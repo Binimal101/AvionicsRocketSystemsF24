@@ -76,7 +76,7 @@ class FlightDataLogger:
             # Use the create method to instantiate MS5611
             self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
 
-            self.ms.update()
+            self.altimeter.update()
             time.sleep(0.1) # allows sensor to breathe
 
         threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
