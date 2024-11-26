@@ -172,7 +172,6 @@ class FlightDataLogger:
         start_payload_time, self.start_time = [time.time() for x in range(2)] #used to measure time delta
         # Open a log file to store flight data, using the current date for naming
         
-        
         with open(f"{file_path}", "a") as file:
             while True:  # Main loop for continuous data collection
 
