@@ -15,12 +15,14 @@ class RYLR998_Transmit:
         print("WAITING FOR START COMMAND FROM BASE CONTROL...")
         while True: #blocks data collection execution in outer scope
             received_data = self.read_data()
-            if received_data and getStartMessage() in received_data:
+            
+            if received_data and getStartMessage() in received_data: #start message here soley to lessen error potential in comms
                 #DECODE and return to Flask scope
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
-                return True #TODO PARSE for and ADD regional sea-level baro pressure
-            if recieved_data:
-                print(f"recieved: {recieved_data}")
+                pressure = received_data.split("|")[1] #float of pressure
+
+                return pressure 
+
     def read_data(self):
         """
         Read a line of data.
