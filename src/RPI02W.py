@@ -11,11 +11,9 @@ from altimeter import MS5611
 from transmit import RYLR998_Transmit
 from reyax import getNumQuaternions
 
-seaLevelPressure = 101.7 #TODO edit src to be accurate of sea-level pressure day-of
-
 #sleep timers
 data_collection_sleep_timer = 0.01
-altimeter_update_sleep_timer = 0.02
+altimeter_update_sleep_timer = 0.05
 sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
 
 class FlightDataLogger:
@@ -86,8 +84,8 @@ class FlightDataLogger:
     
     def wait_for_start_signal(self):
         response = self.radio.wait_for_start_message()
-        #TODO parse response for seaLevelPressure?
-
+        return response #sea_level_pressure
+    
     def transmitFromBuffer(self, qbuff: queue.Queue):
         while qbuff.empty():
             pass
@@ -101,7 +99,7 @@ class FlightDataLogger:
                 time.sleep(0.1) #TODO test optimal value to avoid overflowing oscillatory patterns
                 self.measurement_modulo_modifier -= 1 #make modulo buffer smaller for faster data collection to sync with speed of transmission
                 continue
-
+            
             time_delta, quaternions = qbuff.get()
             self.radio.send(time_delta=time_delta, data_points=quaternions)
 
@@ -154,7 +152,7 @@ class FlightDataLogger:
         self.gyro_last_temperature_reading = result  # Update the last temperature reading
         return result  # Return the processed temperature reading
 
-    def log_flight_data(self):
+    def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
 
         #create new logfile in ../flightLogs/logfileNM
@@ -168,11 +166,13 @@ class FlightDataLogger:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         #begin data transmission process to run concurrently and more efficiently than in the downtime of GIL 
-        self.transmit_process = multiprocessing.Process(target=self.transmitFromBuffer, args=(self.transmit_buffer))
+        self.transmit_process = multiprocessing.Process(target=self.transmitFromBuffer, args=(self.transmit_buffer,))
         self.transmit_process.start()     
 
         start_payload_time, self.start_time = [time.time() for x in range(2)] #used to measure time delta
         # Open a log file to store flight data, using the current date for naming
+        
+        
         with open(f"{file_path}", "a") as file:
             while True:  # Main loop for continuous data collection
 
@@ -198,10 +198,10 @@ class FlightDataLogger:
 
                 # Capture altimeter pressure and calculate altitude.
                 self.altimeter_update_thread.join() #hacky, but since update takes .2 seconds to sleep, thread it and join here
-
+                
                 self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                 self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(seaLevelPressure)
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(sea_level_pressure)
                 
                 self.altimeter_update_thread = threading.Thread(target=self.altimeter.update())
                 self.altimeter_update_thread.start()
@@ -227,6 +227,8 @@ if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
     
     #will block main thread until recieved go command from base control
-    logger.wait_for_start_signal()
-
-    logger.log_flight_data()  # Start logging flight data & begin sub process for transmission 
+    try:
+        sea_level_pressure = float(logger.wait_for_start_signal())
+    except:
+        sea_level_pressure = 101.7
+    logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 

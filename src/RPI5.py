@@ -29,7 +29,7 @@ def checkPass(data):
     if user_password == password:
         emit('validation_result', {'success': True})
         print("sending start")
-        lora.send_start_command(int(data.get('sea_level_pressure', 101.7)))
+        lora.send_start_command(float(data.get('sea_level_pressure', 101.7)))
         print("ending send start")
         # TODO emit a second flag to let FE know to switch over to visualization that LoRa has successfully 
     else:
