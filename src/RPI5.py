@@ -9,8 +9,13 @@ from flask_socketio import SocketIO, send, emit
 
 from recieve import RYLR998_Recieve
 
-load_dotenv(os.getcwd() + ".env") #before process forks
+#RYLR998
+radio = RYLR998_Recieve()
+
+load_dotenv(os.getcwd() + ".env")
 hashedPassword = os.environ.get("hashedPassword")
+
+broadcasting = False
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -70,8 +75,5 @@ def handle_request_data(data):
         emit("data_send", data)
 
 if __name__ == "__main__":
-    
-    #RYLR998
-    radio = RYLR998_Recieve()
 
     socketio.run(app, host="0.0.0.0", debug=True)

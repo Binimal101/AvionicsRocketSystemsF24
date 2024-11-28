@@ -179,6 +179,8 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
         
+        print("SEA LEVEL: ", sea_level_pressure)
+
         # Open a log file to store flight data, using the current date for naming
         with open(f"{file_path}", "a") as file:
             while True:  # Main loop for continuous data collection
@@ -223,12 +225,14 @@ class FlightDataLogger:
                 # Add radio transmission for flightPackage every n measurement cycles (self.measurement_modulo is dynamic)
                 if self.measurement_cycle % self.measurement_modulo == 0:
                     #time delta (for one measurement in payload), data
-                    self.transmit((start_payload_time := time.time()) - start_payload_time, self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
+                    self.transmit((time.time()) - start_payload_time, self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
                 
                 self.measurement_cycle += 1  # Increment the measurement cycle counter
 
                 #Delay between data collection cycles to allow gyro refresh
                 time.sleep(data_collection_sleep_timer)
+                
+                start_payload_time = time.time()
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
