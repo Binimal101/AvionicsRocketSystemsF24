@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Validation</title>
+    <title>NJIT Rocketry Systems Portal</title>
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <style>
 
@@ -24,7 +24,7 @@
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
-            background-image: url('{{ url_for("static", filename="background-image.jpg") }}');
+            background-image: url("{{ url_for("static", filename="background-image.jpg") }}");
             background-size: contain, cover;
             color: white;
             display: flex;
@@ -115,7 +115,7 @@
     </style>
 </head>
 <body>
-    <img id="header-image" src="{{ url_for('static', filename='rocketryLogo.png') }}" alt="Header Image">
+    <img id="header-image" src="{{ url_for("static", filename="rocketryLogo.png") }}" alt="Header Image">
     <h1>LOGIN PAGE</h1>
     <label for="password">Launch Key</label>
     <input type="password" id="password" placeholder="">
@@ -133,32 +133,32 @@
         const socket = io();
 
         // Handle button click
-        document.getElementById('submit-btn').addEventListener('click', () => {
-            const userPassword = document.getElementById('password').value;
-            const userSeaLevelPressure = document.getElementById('sea-level-pressure').value;
+        document.getElementById("submit-btn").addEventListener("click", () => {
+            const userPassword = document.getElementById("password").value;
+            const userSeaLevelPressure = document.getElementById("sea-level-pressure").value;
             
             // Emit the password to the server for validation, sea level pressure for calibration
-            socket.emit('check_password', { password: userPassword, sea_level_pressure: userSeaLevelPressure });
+            socket.emit("check_password", { password: userPassword, sea_level_pressure: userSeaLevelPressure });
         });
 
         // Listen for validation result
-        socket.on('validation_result', (response) => {
-            const successMessage = document.getElementById('success-message');
-            const errorMessage = document.getElementById('error-message');
+        socket.on("validation_result", (response) => {
+            const successMessage = document.getElementById("success-message");
+            const errorMessage = document.getElementById("error-message");
 
             if (response.success) {
                 // If password is correct, redirect to success page
-                errorMessage.style.display = 'none';  // Hide error message
+                errorMessage.style.display = "none";  // Hide error message
 
-                successMessage.textContent = 'Login Successful, Setting Up Systems...'
-                successMessage.style.display = 'block';  // Show success message
+                successMessage.textContent = "Login Successful, Setting Up Systems..."
+                successMessage.style.display = "block";  // Show success message
                 /* in anticipation of having to foster a delay before redirecting */
-                window.location.href = '/visualize';  // Redirect to success page
+                window.location.href = "/visualize";  // Redirect to success page
 
             } else {
                 // If password is incorrect, show error message
-                errorMessage.textContent = 'Incorrect Password, This Will Be Logged';
-                errorMessage.style.display = 'block';  // Show error message
+                errorMessage.textContent = "Incorrect Password, This Will Be Logged";
+                errorMessage.style.display = "block";  // Show error message
             }
         });
         

@@ -14,7 +14,6 @@ class RYLR998_Recieve:
         """
         Send message to rocket to begin data_logging
         """
-        #TODO add sea-level baro pressure to start command payload for finer tuning
 
         pressure_payload = str(pressure)
         payload = f"{getStartMessage()}|{pressure_payload}"
@@ -22,7 +21,6 @@ class RYLR998_Recieve:
         message = f"AT+SEND={RPI02W_address},{len(payload)},{payload}"
         response = self.RYLR998.send_command(message)
         
-        #TODO either wait for response back OR just sleep to ensure logging started before starting visual
         return response
 
     def recieve(self):

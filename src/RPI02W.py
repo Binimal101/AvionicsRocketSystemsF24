@@ -2,11 +2,16 @@
 This module handles the collection and logging of flight data from sensors.
 It retrieves sensor data and writes it to a log file for later analysis.
 """
+
+#built-in
 from pprint import pprint
-import json, time, os, datetime
 import threading, multiprocessing, queue
+import json, time, os, datetime
+
+#embedded stuff
 import board, adafruit_bno055
 
+#files
 from altimeter import MS5611
 from transmit import RYLR998_Transmit
 from reyax import getNumQuaternions
@@ -17,14 +22,10 @@ altimeter_update_sleep_timer = 0.05
 sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
 
 class FlightDataLogger:
-    """Class to collect and log flight data from sensors."""
-
     def __init__(self):
-        """Initialize the FlightDataLogger with necessary setup."""
-
-        # SETUP WITH THREADS THEN WAIT FOR EVERYTHING
         print("Setting up measurement devices")
 
+        # SETUP WITH THREADS THEN WAIT FOR EVERYTHING
         thread_queue = self.setup_hardware() #avoids b2b sleep hassle for setting up configs
         [x.join() for x in thread_queue]
 
@@ -50,7 +51,8 @@ class FlightDataLogger:
         self.transmit_payload = [] # contains one packet to send to RPI5
         self.transmit_payload_limit = getNumQuaternions() # small enough payload that will allow for less time spent wt preamble
 
-    def setup_hardware(self):
+    def setup_hardware(self) -> list:
+        
         #****RADIO****
         def init_radio():
             self.radio = RYLR998_Transmit()
@@ -65,30 +67,29 @@ class FlightDataLogger:
         
         #****ALTIMETER****
         def init_altimeter():
-            # Configure GPIO pins
             cs_pin = 22
             clock_pin = 11
             data_in_pin = 9
             data_out_pin = 10
 
-            # Use the create method to instantiate MS5611
             self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
 
             self.altimeter.update()
             time.sleep(0.1) # allows sensor to breathe
 
-        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
         #works through the sleepiness of the configurations for each module to lessen start timer
+        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
         [x.start() for x in threads]
-        return threads
+        
+        return threads #joined in outer scope
     
-    def wait_for_start_signal(self):
+    def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
         return response #sea_level_pressure
     
-    def transmitFromBuffer(self, qbuff: queue.Queue):
+    def transmitFromBuffer(self, qbuff: queue.Queue): #multiprocessed
         while qbuff.empty():
-            pass
+            time.sleep(0.01)
 
         while True: #queue buffer starts nonempty
 
@@ -109,7 +110,7 @@ class FlightDataLogger:
         if payload is full, gets put into a queue for transmission from a separate process
         
         sends to RPI5_encode in format:
-        [td, qt1: list, qt2: list, ... qt8: list]
+        [td, qt1: list, qt2: [w,x,y,z], ... qt8: [w,x,y,z]]
 
         time delta is for specific data point, average the running time deltas for better approximations
         """
@@ -125,11 +126,14 @@ class FlightDataLogger:
                 self.measurement_modulo += 2
 
             #modifications to modulo from RYLR998 process-scope
-            self.measurement_modulo += self.measurement_modulo_modifier
+            #doesn't allow changes larger than 2, and that will bring modulo below two
+            #TODO look into temperature-based modulo calibration
+            self.measurement_modulo = max(2, self.measurement_modulo + max(-2, self.measurement_modulo_modifier))
             self.measurement_modulo_modifier = 0 
 
             #attempt to transmit and reset payload for next data
             self.transmit_buffer.put(self.transmit_payload)
+            print(f"TIME DELTA: {self.transmit_payload[0]}, QUEUE SIZE: {self.transmit_buffer.qsize()}")
             self.transmit_payload = [time_delta, quaternion]
         else:
             #add to payload
@@ -162,16 +166,20 @@ class FlightDataLogger:
         main_scope_dir = os.path.abspath(os.path.join(current_file_dir, ".."))
 
         # Create a file in the "main scope"
-        file_path = os.path.join(main_scope_dir, f"flightLogs/{datetime.date.today().strftime('%m-%d-%Y')}/logfile.txt")
+        dir_path = os.path.join(main_scope_dir, f"flightLogs/{datetime.date.today().strftime('%m-%d-%Y')}")
+        file_path = dir_path + "/logfile.txt"
+        
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         #begin data transmission process to run concurrently and more efficiently than in the downtime of GIL 
         self.transmit_process = multiprocessing.Process(target=self.transmitFromBuffer, args=(self.transmit_buffer,))
         self.transmit_process.start()     
 
-        start_payload_time, self.start_time = [time.time() for x in range(2)] #used to measure time delta
-        # Open a log file to store flight data, using the current date for naming
+        #used to measure time delta
+        start_payload_time = time.time() 
+        self.start_time = time.time()
         
+        # Open a log file to store flight data, using the current date for naming
         with open(f"{file_path}", "a") as file:
             while True:  # Main loop for continuous data collection
 
@@ -205,7 +213,7 @@ class FlightDataLogger:
                 self.altimeter_update_thread = threading.Thread(target=self.altimeter.update())
                 self.altimeter_update_thread.start()
                 
-                pprint(self.flight_package)  # Print the flight package to the console for debugging
+                # pprint(self.flight_package)  # Print the flight package to the console for debugging
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ",\n"
@@ -228,6 +236,7 @@ if __name__ == "__main__":
     #will block main thread until recieved go command from base control
     try:
         sea_level_pressure = float(logger.wait_for_start_signal())
-    except:
+    except Exception as e:
+        print(e, "ERR, defaulting to 101.7 for sea_level_pressure")
         sea_level_pressure = 101.7
     logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
