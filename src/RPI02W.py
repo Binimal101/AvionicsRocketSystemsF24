@@ -17,8 +17,8 @@ from transmit import RYLR998_Transmit
 from reyax import getNumQuaternions
 
 #sleep timers
-data_collection_sleep_timer = 0.01
-altimeter_update_sleep_timer = 0.05
+data_collection_sleep_timer = 0.018 #tested TODO might be able to be lowered if altitude only taken every n cycles
+altimeter_update_sleep_timer = 0.01 #tested
 sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
 
 class FlightDataLogger:
