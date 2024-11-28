@@ -8,9 +8,8 @@ from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, send, emit
 
 from recieve import RYLR998_Recieve
-print(url_for("/.env"), os.getcwd, __name__)
 
-load_dotenv() #before process forks
+load_dotenv(os.getcwd() + ".env") #before process forks
 hashedPassword = os.environ.get("hashedPassword")
 
 app = Flask(__name__)
@@ -40,7 +39,7 @@ def checkPass(data):
     
     # compare hashed input to hashed password
     if hashedInput == hashedPassword: # double blind
-        emit("validation_result", {"result": True})
+        emit("validation_result", {"success": True})
         
         #begin data collection & provide sea_level_pressure
         radio.send_start_command(float(data.get("sea_level_pressure", 101.7)))

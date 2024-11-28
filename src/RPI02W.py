@@ -133,7 +133,7 @@ class FlightDataLogger:
 
             #attempt to transmit and reset payload for next data
             self.transmit_buffer.put(self.transmit_payload)
-            print(f"TIME DELTA: {self.transmit_payload[0]}, QUEUE SIZE: {self.transmit_buffer.qsize()}")
+            print(f"TIME DELTA: {self.transmit_payload[0]}, QUEUE SIZE: {self.transmit_buffer.qsize()}, MODULO: {self.measurement_modulo}")
             self.transmit_payload = [time_delta, quaternion]
         else:
             #add to payload
@@ -223,7 +223,7 @@ class FlightDataLogger:
                 # Add radio transmission for flightPackage every n measurement cycles (self.measurement_modulo is dynamic)
                 if self.measurement_cycle % self.measurement_modulo == 0:
                     #time delta (for one measurement in payload), data
-                    self.transmit(start_payload_time - (start_payload_time := time.time()), self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
+                    self.transmit((start_payload_time := time.time()) - start_payload_time, self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
                 
                 self.measurement_cycle += 1  # Increment the measurement cycle counter
 
