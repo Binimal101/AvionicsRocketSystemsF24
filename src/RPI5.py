@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, send, emit
 
 from recieve import RYLR998_Recieve
+print(url_for("/.env"), os.getcwd, __name__)
 
 load_dotenv() #before process forks
 hashedPassword = os.environ.get("hashedPassword")
