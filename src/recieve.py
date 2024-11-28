@@ -24,7 +24,12 @@ class RYLR998_Recieve:
     def recieve(self):
         """
         reads a payload of a time delta, and 8 quaternions
-        timeDelta: {
+        timeDelta, {
+            "rotation_w" : short_to_quaternion(data[i]),
+            "rotation_x" : short_to_quaternion(data[i+1]),
+            "rotation_y" : short_to_quaternion(data[i+2]),
+            "rotation_z" : short_to_quaternion(data[i+3])
+        }, {
             "rotation_w" : short_to_quaternion(data[i]),
             "rotation_x" : short_to_quaternion(data[i+1]),
             "rotation_y" : short_to_quaternion(data[i+2]),

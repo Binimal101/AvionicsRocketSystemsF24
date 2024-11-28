@@ -5,11 +5,18 @@ import time, struct
 def getStartMessage():
     return "beginCollection"
 
+def getNumQuaternions() -> int:
+    """
+    Modifying this will affect how many quaternions are being sent and recieved on either end
+    """
+    return 8
+
+
 def getPackFormat():
     #msb <- lsb
     #h : 2-byte short
     #1 short for time_delta, size = 2-bytes * 4 num on the rest for n=0 -> n=8 (w_n,x_n,y_n,z_n)
-    return ">hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"
+    return ">h" + ("hhhh" * getNumQuaternions())
 
 #TIME DELTA (EN/DE)CODING
 
@@ -84,6 +91,9 @@ class RYLR998:
         """
         Configure the module with hardcoded settings optimal for rocket telemetry
         """
+
+        #TODO use proper syntax for updating BW, CR, CRFOP, and PREAMBLE
+
         print("Configuring RYLR998...")
 
         # Frequency band: 905 MHz
@@ -112,7 +122,7 @@ class RYLR998:
         """
         full_command = f'{command}\r\n'
         self.ser.write(full_command.encode())
-        time.sleep(0.01)
+        time.sleep(0.05)
         response = ''
         while True:
             if self.ser.in_waiting:
@@ -259,4 +269,3 @@ class RYLR998:
         Close the serial connection.
         """
         self.ser.close()
-
