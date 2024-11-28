@@ -180,6 +180,10 @@ class RYLR998:
 
                     #5!
                     return payload
+                
+                elif response:
+                    print(response.decode())
+
                 time.sleep(0.0001)
         
 

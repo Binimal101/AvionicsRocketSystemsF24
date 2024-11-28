@@ -102,7 +102,9 @@ class FlightDataLogger:
                 continue
             
             time_delta, quaternions = qbuff.get()
+            print("SENDING DATA")
             self.radio.send(time_delta=time_delta, data_points=quaternions)
+            print("DATA SENT")
 
     def transmit(self, time_delta: int, quaternion: list): #will change layout in the future when we get better radios
         """
@@ -119,7 +121,7 @@ class FlightDataLogger:
             self.transmit_payload.append(time_delta)
         
         if len(self.transmit_payload) > self.transmit_payload_limit: #payload full, prepare 2 send  
-            if self.transmit_buffer.qsize() > self.transmit_buffer_limit:
+            if self.transmit_buffer.qsize() >= self.transmit_buffer_limit:
                 #dynamically resize the modulus for collecting data points to uniformly slow 
                 #transmission while allowing for smooth interpolation
 
@@ -137,6 +139,7 @@ class FlightDataLogger:
             self.transmit_payload = [time_delta, quaternion]
         else:
             #add to payload
+            print("ADDING TO PAYLOAD")
             self.transmit_payload.append(quaternion)
             
             #average existing time delta (theoretically equivalent, experimentally variable)

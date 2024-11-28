@@ -60,8 +60,7 @@ def handle_request_data(data):
     sends data continuously to client for WebGL visualization, TODO integrate handlers on /visualize to
     access emissions AND enable the event loop from that scope
     """
-    print("RECIEVED DATA START")
-
+    
     global broadcasting
     global radio
 
@@ -69,8 +68,6 @@ def handle_request_data(data):
         return
     
     broadcasting = True #the one true client!
-   
-    print("BROADCASTING")
 
     while True:
         data = radio.recieve() #data is dict(), can be emitted normally
