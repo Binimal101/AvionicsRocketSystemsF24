@@ -161,12 +161,7 @@ class RYLR998:
             if self.ser.in_waiting:
                 response = self.ser.readline()
 
-                if response:
-                    if "ERR" in response.decode():
-                        print("ERROR READING DATA")
-                        break
-                    else:
-                        print(response.decode())
+                if response and "RCV" in response.decode():
 
                     decodeable = response.decode().split(",")[2] #could .decode screw with this if a datapoint is chr(',')?  
                     

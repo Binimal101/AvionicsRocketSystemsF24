@@ -105,12 +105,6 @@ class MS5611(object):
         self._spixfer(register)    # send request to read from register
         value = (self._spixfer(0) << 8) | self._spixfer(0) 
         GPIO.output(self.cs_pin, GPIO.HIGH)
-        
-        """
-        # Add validation
-        if value == 0xFFFF:  # Invalid read
-            raise IOError(f"Failed to read register {hex(register)}")
-        """
 
         return value
 
@@ -136,11 +130,6 @@ class MS5611(object):
         self.C4 = self._read16(self.__MS5611_C4)   # UINT16
         self.C5 = self._read16(self.__MS5611_C5)   # UINT16
         self.C6 = self._read16(self.__MS5611_C6)   # UINT16
-
-        """
-        if self.C1 == 0 or self.C6 == 0:
-            raise ValueError("Invalid calibration coefficients read from MS5611")
-        """
 
         print('C1 = {0:10d}'.format(self.C1))
         print('C2 = {0:10d}'.format(self.C2))
