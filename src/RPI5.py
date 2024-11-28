@@ -22,7 +22,7 @@ def index():
 
 @app.route("/visualize")
 def success():
-    return render_template("success.html")
+    return render_template("visualize.html")
 
 #SOCKET-IO EVENTS
 @socketio.on("check_password")
