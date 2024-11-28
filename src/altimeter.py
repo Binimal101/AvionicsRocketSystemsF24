@@ -220,6 +220,10 @@ class MS5611(object):
         self.PRES = self.PRES / 1000.0 # Pressure, kPa
          
     def returnAltitude(self, seaLevel_kPa = 101.325):
-        print("SEA_LEVEL IN CALCULATION SCOPE: ", seaLevel_kPa)
+        
+        if type(self.PRES) == float and self.PRES > 0:
+            print("pressure syncing, skipping valuation")
+            return 0
+        
         altitude = 44330 * (1.0 - numpy.power(self.PRES / seaLevel_kPa, 0.1903))
         return '{:.2f}'.format(altitude)
