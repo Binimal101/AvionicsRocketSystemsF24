@@ -11,7 +11,7 @@ class RYLR998_Transmit:
         self.lora = RYLR998(uart_port, baud_rate, 1, address=1, network_id=1)
         self.ser = self.lora.ser # for more direct access to device
 
-    def wait_for_start_message(self):
+    def wait_for_start_message(self) -> float:
         print("WAITING FOR START COMMAND FROM BASE CONTROL...")
         while True: #blocks data collection execution in outer scope
             received_data = self.read_data()
@@ -21,7 +21,7 @@ class RYLR998_Transmit:
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
                 pressure = received_data.split("|")[1] #float of pressure
 
-                return pressure 
+                return float(pressure) 
 
     def read_data(self):
         """
