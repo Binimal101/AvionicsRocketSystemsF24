@@ -13,6 +13,7 @@
         socket.emit("request_data", {unneeded : "true"}) //starts emissions from back end
         
         socket.on("data_send", (response) => {
+            console.log("RCVD DATA");
             console.log(response);
         });
 

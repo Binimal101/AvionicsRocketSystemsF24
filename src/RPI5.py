@@ -52,7 +52,7 @@ def checkPass(data):
     else:
         emit("validation_result", {"success": False})
 
-#TODO refactor to have seperate process read data, globally access from buffer for emissions
+#TODO refactor to have seperate process read data, globally access from global queue for emissions
 @socketio.on("request_data")
 def handle_request_data(data):
     """
@@ -60,6 +60,7 @@ def handle_request_data(data):
     sends data continuously to client for WebGL visualization, TODO integrate handlers on /visualize to
     access emissions AND enable the event loop from that scope
     """
+    print("RECIEVED DATA START")
 
     global broadcasting
     global radio
@@ -68,12 +69,13 @@ def handle_request_data(data):
         return
     
     broadcasting = True #the one true client!
-    
+   
+    print("BROADCASTING")
+
     while True:
         data = radio.recieve() #data is dict(), can be emitted normally
         pprint(data)
         emit("data_send", data)
 
 if __name__ == "__main__":
-
     socketio.run(app, host="0.0.0.0", debug=True)
