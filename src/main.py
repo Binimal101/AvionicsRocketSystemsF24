@@ -6,7 +6,7 @@ from pprint import pprint
 import math, json, time, numpy, os
 import board, adafruit_bno055
 
-from altimeter import MS5611
+from sensors.altimeter import MS5611
 
 def get_angle_representation(w, x, y, z):
     """
