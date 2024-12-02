@@ -1,6 +1,6 @@
 # Software Systems & Electronics Integration for the Javelin Jr. NJITRC Fall 2024 Launch
 
-![Rocketry Logo](src/static/rocketry%20Logo.png)
+![Rocketry Logo](src/static/rocketryLogo.png)
 
 ## Overview
 This project is designed to support data collection and transmission using a RYLR998 LoRa radio module in a rocket system. The system is integrated with a Flask web application that allows real-time data visualization and control via a web interface. The RYLR998 module is responsible for sending and receiving data, and the Flask web app manages communication with the module and provides a visual display of the transmitted data.
