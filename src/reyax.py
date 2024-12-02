@@ -171,11 +171,12 @@ class RYLR998:
                     #4                    
                     payload.append(short_to_time_delta(data[0])) #time_delta
                     for i in range(1, len(data), 4): #(w_n, x_n, y_n, z_n)
+                        quaternion = short_to_quaternion(data[i], data[i+1], data[i+2], data[i+3])
                         payload.append({
-                            "rotation_w" : short_to_quaternion(data[i]),
-                            "rotation_x" : short_to_quaternion(data[i+1]),
-                            "rotation_y" : short_to_quaternion(data[i+2]),
-                            "rotation_z" : short_to_quaternion(data[i+3])
+                            "rotation_w" : quaternion[0],
+                            "rotation_x" : quaternion[1],
+                            "rotation_y" : quaternion[2],
+                            "rotation_z" : quaternion[3],
                         })
 
                     #5!
