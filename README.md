@@ -80,10 +80,10 @@ python app.py
 
 The following individuals have contributed to this project:
 
-- [Contributor Name 1](https://github.com/contributor1) - Role/Contribution
-- [Contributor Name 2](https://github.com/contributor2) - Role/Contribution
-- [Contributor Name 3](https://github.com/contributor3) - Role/Contribution
-- [Contributor Name 4](https://github.com/contributor4) - Role/Contribution
+- [Contributor Matthew Tolocka](https://github.com/mt657) - Software Optimization Specialist
+- [Contributor Matthew Tujague](https://github.com/Binimal101) - Lead Software Engineer/Avionics Lead
+- [Contributor Amogh Karee](https://github.com/AmoghKaree) - Flask Web Developer
+- [Contributor Nick C Volpe](https://github.com/ncvolpe) - Support Engineer
 
 These are the current contributors to the project.
 
