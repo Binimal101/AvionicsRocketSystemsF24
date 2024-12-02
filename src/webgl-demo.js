@@ -32,7 +32,7 @@ void main () {
 
 const modelPath = 'model/RocketShip.obj';
 const filePath = "goodData.txt";
-const quat_file = "quaternion_linearized_transormations.txt";
+const quat_file = "interpolated_data.txt";
 const framerate = 10; // 1/10 of a second.
 
 async function loadRotationData(filePath) {
@@ -255,8 +255,8 @@ async function main() {
 
   const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
 
-  const cameraTarget = [0, 10, 0];
-  const cameraPosition = [0, 0, 50];
+  const cameraTarget = [0, 2, 0];
+  const cameraPosition = [0, 0, 30];
   const zNear = 0.1;
   const zFar = 100;
 
@@ -315,7 +315,7 @@ async function main() {
     //rotationIndex = (rotationIndex + 1) % totalRotationData;
     //rotationIndex = framecounter % totalRotationData;
     
-    //rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
+    rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
     
     let tempW = Number(document.getElementById("input_data").getAttribute("w_in"));
     let tempX = Number(document.getElementById("input_data").getAttribute("x_in"));
@@ -323,9 +323,9 @@ async function main() {
     let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
     let tempeul = tempquat.toEulerNormalized();
-    angleX = tempeul.pitch;
-    angleY = tempeul.roll;
-    angleZ = tempeul.yaw;
+    //angleX = tempeul.pitch;
+    //angleY = tempeul.roll;
+    //angleZ = tempeul.yaw;
     //rotationIndex = (rotationIndex + 1);
     //rotations (mostly for demo, needs to be changed)
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix

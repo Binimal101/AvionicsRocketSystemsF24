@@ -16,7 +16,7 @@ function drawScene(gl, programInfo, buffers) {
     // and 100 units away from the camera.
   
     const fieldOfView = (45 * Math.PI) / 180; // in radians
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight*2;
     const zNear = 0.1;
     const zFar = 100.0;
     const projectionMatrix = mat4.create();
