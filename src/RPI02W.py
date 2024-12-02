@@ -45,7 +45,7 @@ class FlightDataLogger:
         self.measurement_modulo_modifier = 0 #will modify measurement_modulo after last payload finishes
 
         #for when data collection is faster than data transmission, put items in a buffer to get sent over
-        self.transmit_buffer = queue.Queue() #Holds all packets which, in order, will be sent to RPI5
+        self.transmit_buffer = multiprocessing.Queue() #Holds all packets which, in order, will be sent to RPI5
         self.transmit_buffer_limit = 2 # IF PASSED, LOGIC WILL BE SETUP TO INCREASE MEASUREMENT_MODULO
 
         self.transmit_payload = [] # contains one packet to send to RPI5
@@ -87,7 +87,7 @@ class FlightDataLogger:
         response = self.radio.wait_for_start_message()
         return response #sea_level_pressure
     
-    def transmitFromBuffer(self, qbuff: queue.Queue): #multiprocessed
+    def transmitFromBuffer(self, qbuff: multiprocessing.Queue): #multiprocessed
         while qbuff.empty():
             time.sleep(0.01)
 
@@ -217,7 +217,7 @@ class FlightDataLogger:
                 
                 self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                 self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(sea_level_pressure)
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.return_altitude(sea_level_pressure)
                 
                 self.altimeter_update_thread = threading.Thread(target=self.altimeter.update())
                 self.altimeter_update_thread.start()
