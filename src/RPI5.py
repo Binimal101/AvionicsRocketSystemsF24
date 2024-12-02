@@ -9,7 +9,7 @@ from flask_socketio import SocketIO, send, emit
 
 from recieve import RYLR998_Recieve
 
-#RYLR998
+#RYLR998 | If multiple instances progress, load lazily
 radio = RYLR998_Recieve()
 
 load_dotenv(os.getcwd() + ".env")
@@ -60,17 +60,17 @@ def handle_request_data(data):
     sends data continuously to client for WebGL visualization, TODO integrate handlers on /visualize to
     access emissions AND enable the event loop from that scope
     """
-    
-    global broadcasting
+
+    global isBroadcasting
     global radio
 
-    if broadcasting: #only one instance of this should EVER run; kills others
+    if isBroadcasting: #only one instance of this should EVER run; discards others
         return
     
-    broadcasting = True #the one true client!
+    isBroadcasting = True #the one true client!
 
     while True:
-        data = radio.recieve() #data is dict(), can be emitted normally
+        data = radio.recieve() #type(data) == dict, can be emitted normally
         pprint(data)
         emit("data_send", data)
 

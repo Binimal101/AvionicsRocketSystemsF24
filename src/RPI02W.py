@@ -91,6 +91,10 @@ class FlightDataLogger:
         while qbuff.empty():
             time.sleep(0.01)
 
+        """
+        TODO MIGRATE TO Multiprocess.queue or multprocess.manager
+        """
+
         while True: #queue buffer starts nonempty
 
             if qbuff.empty():
@@ -129,7 +133,7 @@ class FlightDataLogger:
 
             #modifications to modulo from RYLR998 process-scope
             #doesn't allow changes larger than 2, and that will bring modulo below two
-            #TODO look into temperature-based modulo calibration
+            #TODO look into temperature-based modulo calibration (like sim annealing)
             self.measurement_modulo = max(2, self.measurement_modulo + max(-2, self.measurement_modulo_modifier))
             self.measurement_modulo_modifier = 0 
 
@@ -246,4 +250,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(e, "ERR, defaulting to 101.7 for sea_level_pressure")
         sea_level_pressure = 101.7
+        
     logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
