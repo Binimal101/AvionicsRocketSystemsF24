@@ -217,7 +217,7 @@ class FlightDataLogger:
                 
                 self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                 self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(sea_level_pressure)
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.return_altitude(sea_level_pressure)
                 
                 self.altimeter_update_thread = threading.Thread(target=self.altimeter.update())
                 self.altimeter_update_thread.start()
