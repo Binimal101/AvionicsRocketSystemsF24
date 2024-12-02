@@ -74,6 +74,7 @@ Once the system is installed and configured, run the Flask application:
 
 ```bash
 python app.py
+```
 
 
 ## Contributors
