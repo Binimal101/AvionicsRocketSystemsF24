@@ -81,10 +81,10 @@ python app.py
 
 The following individuals have contributed to this project:
 
-- [Contributor Matthew Tolocka](https://github.com/mt657) - Software Optimization Specialist
-- [Contributor Matthew Tujague](https://github.com/Binimal101) - Lead Software Engineer/Avionics Lead
-- [Contributor Amogh Karee](https://github.com/AmoghKaree) - Flask Web Developer
-- [Contributor Nick C Volpe](https://github.com/ncvolpe) - Support Engineer
+- [Matthew Tolocka](https://github.com/mt657) - Software Optimization Specialist
+- [Matthew Tujague](https://github.com/Binimal101) - Lead Software Engineer/Avionics Lead
+- [Amogh Karee](https://github.com/AmoghKaree) - Flask Web Developer
+- [Nick C Volpe](https://github.com/ncvolpe) - Support Engineer
 
 These are the current contributors to the project.
 
