@@ -214,9 +214,9 @@ async function main() {
     angleZ = rotationData[0].z;
   }
 
-  /*for(let dat of rotationData) {
+  for(let dat of rotationData) {
     console.log([radToDeg(dat.x), radToDeg(dat.y), radToDeg(dat.z)]);
-  }*/
+  }
 
   // Demo controls
   function setAngleX(deg) { angleX = deg; return angleX; }
