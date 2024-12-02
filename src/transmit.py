@@ -40,7 +40,7 @@ class RYLR998_Transmit:
         print(f"sending data: {bytestr}")
         return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat))
 
-    def encode(time_delta: int, data_points: list) -> bytes:
+    def encode(self, time_delta: int, data_points: list) -> bytes:
         """
         Through calculations we expect len(datapoints) == 9, although there are ONLY 8 data points
         
