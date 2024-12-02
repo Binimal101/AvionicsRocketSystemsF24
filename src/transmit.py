@@ -74,7 +74,7 @@ class RYLR998_Transmit:
         #build encodable array
         encodable_array = []
         for dp in data_points:
-            encodable_array.extend(quaternion_to_short(dp))
+            encodable_array.extend(*quaternion_to_short(dp))
 
         payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
 
