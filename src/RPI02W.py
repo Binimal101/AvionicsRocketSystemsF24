@@ -105,7 +105,11 @@ class FlightDataLogger:
                 self.measurement_modulo_modifier -= 1 #make modulo buffer smaller for faster data collection to sync with speed of transmission
                 continue
             
-            time_delta, quaternions = qbuff.get()
+            values = qbuff.get()
+
+            time_delta = values[0]
+            quaternions = [x for x in values[1:]] #needed to guarantee type(x) == list
+
             print("SENDING DATA")
             self.radio.send(time_delta=time_delta, data_points=quaternions)
             print("DATA SENT")
