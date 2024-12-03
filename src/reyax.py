@@ -162,29 +162,34 @@ class RYLR998:
                 response = self.ser.readline()
                 print(f"read {response}")
 
-                if response and "RCV" in response[len(b'+RCV=')].decode():
+                if response:
 
                     start_index, end_index = 0, 0
                     #1
-                    comma_ct = 0
+                    comma_ct1 = 0
                     cur_index = 0
                     for byte in response: #type(byte) is int
                         if byte == ord(','):
-                            comma_ct += 1
-                        if comma_ct == 2:
+                            comma_ct1 += 1
+                        if comma_ct1 == 2:
                             start_index = cur_index + 1
                             break
                         cur_index += 1
                     #2
-                    comma_ct = 0
+                    comma_ct2 = 0
                     cur_index = 0
                     for byte in response[::-1]:
                         if byte == ord(','):
-                            comma_ct += 1
-                        if comma_ct == 2:
+                            comma_ct2 += 1
+                        if comma_ct2 == 2:
                             end_index = len(response) - cur_index - 1
                             break
                         cur_index += 1     
+
+                    if comma_ct1 != 2 or comma_ct2 != 2:
+                        print("err, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}")
+                        continue
+
 
                     #3
                     data = struct.unpack(getPackFormat(), response[start_index:end_index])
