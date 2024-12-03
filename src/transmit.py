@@ -38,7 +38,7 @@ class RYLR998_Transmit:
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)
         print(f"sending data: {bytestr}")
-        return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat))
+        return self.lora.send_data(data = bytestr + "\r\n".encode(), dataSize = struct.calcsize(getPackFormat()))
 
     def encode(self, time_delta: int, data_points: list) -> bytes:
         """
