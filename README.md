@@ -41,13 +41,17 @@ The system uses a combination of Flask-SocketIO and the RYLR998 module to collec
 
 The project is structured into the following key files:
 
-- **`app.py`**: The main Flask application that handles routes, authentication, and real-time communication.
-- **`recieve.py`**: Contains the `RYLR998_Recieve` class for receiving and decoding data from the LoRa module.
-- **`transmit.py`**: Contains the `RYLR998_Transmit` class for encoding and transmitting data to the LoRa module.
-- **`requirements.txt`**: Lists the Python dependencies required for the project.
-- **`index.html`**: The homepage of the web application for password authentication.
-- **`visualize.html`**: Displays real-time visualizations of the transmitted data.
-- **`.env`**: Contains environment variables, including the hashed password for authentication.
+- **[`altimeter.py`](src/altimeter.py)**: Manages altitude measurement and data processing for the LoRa module.
+- **[`camera.py`](src/camera.py)**: Handles video capture and logging from a Raspberry Pi camera module, supporting non-blocking video recording.
+- **[`recieve.py`](src/recieve.py)**: Receives and decodes data from the LoRa module.
+- **[`metrics.py`](src/metrics.py)**: Provides functions for processing telemetry data, including time delta and quaternion encoding/decoding.
+- **[`requirements.txt`](src/requirements.txt)**: Lists the Python dependencies required for the project.
+- **[`transmit.py`](src/transmit.py)**: Encodes and transmits data to the LoRa module.
+- **[`index.html`](src/templates/index.html)**: The homepage of the web application for password authentication.
+- **[`visualize.html`](src/templates/visualize.html)**: Displays real-time visualizations of the transmitted data.
+- **[`.env`](.env)**: Contains environment variables, including the hashed password for authentication.
+- **[`RPI02W.py`](src/RPI02W.py)**: Manages interaction with the Raspberry Pi 2W for telemetry and sensor data collection.
+- **[`RP15.py`](src/RP15.py)**: Runs the Flask server and handles socket communication for password validation and real-time data emission.
 
 ## Installation
 
@@ -75,7 +79,6 @@ Once the system is installed and configured, run the Flask application:
 ```bash
 python app.py
 ```
-
 
 ## Contributors
 
