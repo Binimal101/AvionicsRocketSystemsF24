@@ -160,6 +160,7 @@ class RYLR998:
         while True:
             if self.ser.in_waiting:
                 response = self.ser.readline()
+                print(f"read {response}")
 
                 if response and "RCV" in response.decode():
 

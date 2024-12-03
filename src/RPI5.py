@@ -77,6 +77,7 @@ def handle_request_data(data):
 
     while True:
         data = radio.recieve() #type(data) == dict, can be emitted normally
+        print("reading data...")
         pprint(data)
         emit("data_send", data)
 
