@@ -162,7 +162,7 @@ class RYLR998:
                 response = self.ser.readline()
                 print(f"read {response}")
 
-                if response and "RCV" in response.decode():
+                if response and "RCV" in response[len(b'+RCV=')].decode():
 
                     start_index, end_index = 0, 0
                     #1
