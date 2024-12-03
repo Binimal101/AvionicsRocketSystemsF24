@@ -15,7 +15,8 @@ radio = RYLR998_Recieve()
 load_dotenv(os.getcwd() + ".env")
 hashedPassword = os.environ.get("hashedPassword")
 
-broadcasting = False
+isBroadcasting = False
+launchSequenceInitiated = False
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -35,7 +36,7 @@ def checkPass(data):
     """
     checks password emission from webapp homepage, if true, sends start sig & begins visualization
     """
-    global hashedPassword, radio
+    global hashedPassword, radio, launchSequenceInitiated
 
     userpass = data.get("password", "")
     hashedInput = sha256(userpass.encode()).hexdigest()
@@ -45,9 +46,9 @@ def checkPass(data):
     # compare hashed input to hashed password
     if hashedInput == hashedPassword: # double blind
         emit("validation_result", {"success": True})
-        
         #begin data collection & provide sea_level_pressure
         radio.send_start_command(float(data.get("sea_level_pressure", 101.7)))
+        launchSequenceInitiated = True
         
     else:
         emit("validation_result", {"success": False})
@@ -61,8 +62,13 @@ def handle_request_data(data):
     access emissions AND enable the event loop from that scope
     """
 
-    global isBroadcasting
     global radio
+    global isBroadcasting
+    global launchSequenceInitiated
+
+    if not launchSequenceInitiated:
+        return
+
 
     if isBroadcasting: #only one instance of this should EVER run; discards others
         return
