@@ -45,7 +45,7 @@ The project is structured into the following key files:
 - **[`camera.py`](src/camera.py)**: Handles video capture and logging from a Raspberry Pi camera module, supporting non-blocking video recording.
 - **[`recieve.py`](src/recieve.py)**: Receives and decodes data from the LoRa module.
 - **[`metrics.py`](src/metrics.py)**: Provides functions for processing telemetry data, including time delta and quaternion encoding/decoding.
-- **[`requirements.txt`](src/requirements.txt)**: Lists the Python dependencies required for the project.
+- **[`requirements.txt`](requirements.txt)**: Lists the Python dependencies required for the project.
 - **[`transmit.py`](src/transmit.py)**: Encodes and transmits data to the LoRa module.
 - **[`index.html`](src/templates/index.html)**: The homepage of the web application for password authentication.
 - **[`visualize.html`](src/templates/visualize.html)**: Displays real-time visualizations of the transmitted data.
