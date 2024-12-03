@@ -164,10 +164,30 @@ class RYLR998:
 
                 if response and "RCV" in response.decode():
 
-                    decodeable = response.decode().split(",")[2] #could .decode screw with this if a datapoint is chr(',')?  
-                    
+                    start_index, end_index = 0, 0
+                    #1
+                    comma_ct = 0
+                    cur_index = 0
+                    for byte in response: #type(byte) is int
+                        if byte == ord(','):
+                            comma_ct += 1
+                        if comma_ct == 2:
+                            start_index = cur_index + 1
+                            break
+                        cur_index += 1
+                    #2
+                    comma_ct = 0
+                    cur_index = 0
+                    for byte in response[::-1]:
+                        if byte == ord(','):
+                            comma_ct += 1
+                        if comma_ct == 2:
+                            end_index = len(response) - cur_index - 1
+                            break
+                        cur_index += 1     
+
                     #3
-                    data = struct.unpack(getPackFormat(), decodeable.encode())
+                    data = struct.unpack(getPackFormat(), response[start_index:end_index])
 
                     #4                    
                     payload.append(short_to_time_delta(data[0])) #time_delta
@@ -180,6 +200,7 @@ class RYLR998:
                             "rotation_z" : quaternion[3],
                         })
 
+                    print("data parsed from payload: ", data)
                     #5!
                     return payload
                 
