@@ -16,7 +16,7 @@ Key functionalities of the system include:
 - [Code Structure](#code-structure)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
+- [Contributing](#Contributors)
 - [License](#license)
 
 ## System Design
