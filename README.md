@@ -74,10 +74,16 @@ The project is structured into the following key files:
 
 ## Usage
 
-Once the system is installed and configured, run the Flask application:
+Once the system is installed and configured, you can begin collecting and logging flight data by running the following command:
 
 ```bash
-python app.py
+python RP102W.py
+```
+
+Once the system is installed and configured, start the Flask application by running the following command:
+
+```bash
+python RP15.py
 ```
 
 ## Contributors
