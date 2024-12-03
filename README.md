@@ -74,7 +74,7 @@ The project is structured into the following key files:
 
 ## Usage
 
-Once the system is installed and configured, you can begin collecting and logging flight data by running the following command:
+After installation and configuration, start collecting and logging flight data with the following command:
 
 ```bash
 python RP102W.py
