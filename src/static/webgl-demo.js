@@ -1,5 +1,5 @@
-import { initBuffers } from "./init-buffers.js";
-import { drawScene } from "./draw-scene.js";
+import { initBuffers } from "{{ url_for('static', filename='init-buffers.js') }}";
+import { drawScene } from "{{ url_for('static' filename='draw-scene.js') }}";
 
 const vs = `
 attribute vec4 a_position;
@@ -30,9 +30,9 @@ void main () {
   gl_FragColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a);
 }`;
 
-const modelPath = 'model/rocket_edited.obj';
-const filePath = "goodData.txt";
-const quat_file = "interpolated_data.txt";
+const modelPath = "{{ url_for('static', 'model/rocket_edited.obj') }}";
+const filePath = "{{ url_for('static', 'goodData.txt') }}";
+const quat_file = "{{ url_for('static', 'interpolated_data.txt') }}";
 const framerate = 10; // 1/10 of a second.
 
 async function loadRotationData(filePath) {
