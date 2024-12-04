@@ -1,5 +1,5 @@
 import { initBuffers } from "{{ url_for('static', filename='init-buffers.js') }}";
-import { drawScene } from "{{ url_for('static' filename='draw-scene.js') }}";
+import { drawScene } from "{{ url_for('static', filename='draw-scene.js') }}";
 
 const vs = `
 attribute vec4 a_position;
