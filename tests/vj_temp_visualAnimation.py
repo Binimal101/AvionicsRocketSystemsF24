@@ -1,3 +1,4 @@
+#For personal testing, this is not needed for the larger program
 '''[
     [1.0, 0.0, 0.0, 0.0],        # Starting position (identity quaternion)
     [0.923, 0.382, 0.0, 0.0],    # Pitch 45 degrees
