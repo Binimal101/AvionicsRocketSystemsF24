@@ -165,6 +165,7 @@ class RYLR998:
                 if response:
 
                     start_index, end_index = 0, 0
+                    
                     #1
                     comma_ct1 = 0
                     cur_index = 0
@@ -175,6 +176,7 @@ class RYLR998:
                             start_index = cur_index + 1
                             break
                         cur_index += 1
+                    
                     #2
                     comma_ct2 = 0
                     cur_index = 0

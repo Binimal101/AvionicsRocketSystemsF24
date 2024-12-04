@@ -6,6 +6,7 @@
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <title>NJIT Rocket Club</title>
 </head>
+
 <body>
     <script>
         const socket = io();
@@ -15,6 +16,8 @@
         socket.on("data_send", (response) => {
             console.log("RCVD DATA");
             console.log(response);
+            
+            document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
         });
 
     </script>

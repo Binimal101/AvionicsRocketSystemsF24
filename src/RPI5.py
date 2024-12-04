@@ -78,8 +78,8 @@ def handle_request_data(data):
     while True:
         data = radio.recieve() #type(data) == dict, can be emitted normally
         print("reading data...")
-        pprint(data)
+        print(data, flush=True)
         emit("data_send", data)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="127.0.0.1", debug=True, allow_unsafe_werkzeug=True)
