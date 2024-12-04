@@ -16,7 +16,11 @@
         socket.on("data_send", (response) => {
             console.log("RCVD DATA");
             console.log(response);
-            
+            let w = response.slice(0,0);
+            let x = response.slice(1,1);
+            let y = response.slice(2,2);
+            let z = response.slice(3,3);
+            update(w,x,y,z);
             document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
         });
 

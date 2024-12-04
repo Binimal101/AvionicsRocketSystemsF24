@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 import threading
 from queue import Queue
+import interpolation.py
 
 from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, send, emit
@@ -79,10 +80,11 @@ def handle_request_data(data):
         return
 
     isBroadcasting = True  # Mark broadcasting as active
-    read_data()
     
-    send_thread = threading.Thread(target=send_data, daemon=True)
+    send_thread = threading.Thread(target=send_data)
     send_thread.start()
+    
+    read_data()
 
 def read_data():
     """
@@ -97,7 +99,6 @@ def read_data():
         if data:
             data_queue.put(data)
             print("Data added to queue:", data)
-
 def send_data():
     """
     Thread to emit data from the queue to the client.
@@ -106,6 +107,8 @@ def send_data():
     while launchSequenceInitiated:
         if not data_queue.empty():
             data = data_queue.get()
+            #interp. WIP
+            interpolate_quaternions(input_data)
             print("Sending data:", data)
             socketio.emit("data_send", data)
         else:
