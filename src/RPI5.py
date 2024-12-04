@@ -75,11 +75,16 @@ def handle_request_data(data):
     
     isBroadcasting = True #the one true client!
 
-    while True:
-        data = radio.recieve() #type(data) == dict, can be emitted normally
-        print("reading data...")
-        print(data, flush=True)
-        emit("data_send", data)
+    with open("payloadData.txt", "w"):
+        pass
+
+    with open("payloadData.txt", "a") as f:
+        while True:
+            data = radio.recieve() #type(data) == dict, can be emitted normally
+            print("reading data...")
+            print(data, flush=True)
+            f.write(str(data) + "\n\n")
+            emit("data_send", data)
 
 if __name__ == "__main__":
     socketio.run(app, host="127.0.0.1", debug=True, allow_unsafe_werkzeug=True)
