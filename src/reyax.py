@@ -282,4 +282,3 @@ class RYLR998:
         Close the serial connection.
         """
         self.ser.close()
-
