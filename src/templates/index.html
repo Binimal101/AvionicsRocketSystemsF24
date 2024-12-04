@@ -153,6 +153,8 @@
                 successMessage.textContent = "Login Successful, Setting Up Systems..."
                 successMessage.style.display = "block";  // Show success message
                 /* in anticipation of having to foster a delay before redirecting */
+                
+                socket.emit("request_data", {unneeded : "true"}) //starts emissions from back end
                 window.location.href = "/visualize";  // Redirect to success page
 
             } else {

@@ -21,6 +21,19 @@
         <link rel="stylesheet" href="{{ url_for("static", filename="styles.css") }}">
     </head>
     <body id="information">
+        <script>
+
+            const socket = io();
+
+            socket.on("data_send", (response) => {
+                    let w = response[0];
+                    let x = response[1];
+                    let y = response[2];
+                    let z = response[3];
+                    update(w,x,y,z);
+                }
+    
+        </script>
         <div id="angles">
             <span id="xAngleLabel">X Angle: </span><span id="xAngle">0</span><br>
             <span id="yAngleLabel">Y Angle: </span><span id="yAngle">0</span><br>

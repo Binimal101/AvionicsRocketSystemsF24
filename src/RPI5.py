@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import os
 import threading
 from queue import Queue
+from interpolation import interpolate_quaternions
+from time import sleep
 
 from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, send, emit
@@ -69,7 +71,7 @@ def handle_request_data(data):
     """
     Initiates data handling only once during execution, ensuring proper coordination between threads.
     """
-    global launchSequenceInitiated, isBroadcasting
+    global launchSequenceInitiated, isBroadcasting, data_queue
 
     if not launchSequenceInitiated:
         return
@@ -79,10 +81,13 @@ def handle_request_data(data):
         return
 
     isBroadcasting = True  # Mark broadcasting as active
-    read_data()
-    
-    send_thread = threading.Thread(target=send_data, daemon=True)
+
+    data_queue = get_data_queue()
+
+    send_thread = threading.Thread(target=send_data)
     send_thread.start()
+    
+    read_data()
 
 def read_data():
     """
@@ -90,24 +95,28 @@ def read_data():
     """
     global radio, launchSequenceInitiated, data_queue
 
-    data_queue = get_data_queue()
-
     while launchSequenceInitiated:
         data = radio.recieve()  # Assume this returns a dictionary
         if data:
             data_queue.put(data)
             print("Data added to queue:", data)
-
 def send_data():
     """
     Thread to emit data from the queue to the client.
     """
     global launchSequenceInitiated, data_queue
+
     while launchSequenceInitiated:
         if not data_queue.empty():
             data = data_queue.get()
+            
+            combined = interpolate_quaternions(data)
+            #for loop thru combined and emit that way we avoid deadlock
             print("Sending data:", data)
-            socketio.emit("data_send", data)
+            for i in combined:
+                socketio.emit("data_send", i)
+                sleep(.1)
+                
         else:
             # Small sleep to avoid busy-waiting
             threading.Event().wait(0.01)
