@@ -3,21 +3,21 @@
     <head>
         <meta id="input_data" w_in="0" x_in="0" y_in="0" z_in="0">
         <meta charset="utf-8" />
-        <script src="{{ url_for("static", filename="interface.js")}}"></script>
-        <script src="{{ url_for("static", filename="lib/webgl_local/webgl-utils.js" }}"></script>
-        <script src=" {{ url_for("static", filename="lib/webgl_local/m4.js") }}"></script>
+        <script src="{{ url_for("static", filename="interface.js") }}"></script>
+        <script src="{{ url_for("static", filename="libjs/webgl_local/webgl-utils.js") }}"></script>
+        <script src=" {{ url_for("static", filename="libjs/webgl_local/m4.js") }}"></script>
         <!--<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
         <script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>-->
         
         <!--src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"-->
         <title>WebGL Demo</title>
         <script
-            src="{{url_for("static", filename="lib/webgl_local/gl-matrix-min.js"}}"
+            src="{{ url_for("static", filename="libjs/webgl_local/gl-matrix-min.js") }}"
             integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
             crossorigin="anonymous"
             defer>
         </script>
-        <script src="{{url_for("static", filename="webgl-demo.js"}}" type="module"></script>
+        <script src="{{url_for("static", filename="webgl-demo.js") }}" type="module"></script>
         <link rel="stylesheet" href="{{ url_for("static", filename="styles.css") }}">
     </head>
     <body id="information">
@@ -30,7 +30,7 @@
         <canvas id="gl-canvas">
             
         </canvas>
-        <!-- THESE INVISIBLE ELEMENTS ARE VERY IMPORTANT -->
+        <!-- THESE INVISIBLE ELEMENTS ARE NOT VERY IMPORTANT..? -->
         <input type="hidden" id="w_in">
         <input type="hidden" id="x_in">
         <input type="hidden" id="y_in">
