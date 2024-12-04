@@ -30,7 +30,7 @@ void main () {
   gl_FragColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a);
 }`;
 
-const modelPath = 'model/RocketShip.obj';
+const modelPath = 'model/rocket_edited.obj';
 const filePath = "goodData.txt";
 const quat_file = "interpolated_data.txt";
 const framerate = 10; // 1/10 of a second.
