@@ -1,5 +1,5 @@
 import serial
-import reyax_test as reyax
+import reyax
 import time
 
 import matplotlib.pyplot as plt

@@ -71,10 +71,14 @@ def checkPass(data):
     
     # Compare hashed input to hashed password
     if hashedInput == hashedPassword:
+        launchSequenceInitiated = True
+        
+        sleep(0.01) #race condition if emits before flag checks, the one request_data socket flag will NEVER send
+
         emit("validation_result", {"success": True})
         # Begin data collection & provide sea_level_pressure
         radio.send_start_command(float(data.get("sea_level_pressure", 101.7)))
-        launchSequenceInitiated = True
+
     else:
         emit("validation_result", {"success": False})
 
@@ -94,13 +98,11 @@ def handle_request_data(data):
 
     isBroadcasting = True  # Mark broadcasting as active
 
-    data_queue = get_data_queue()
+    data_queue = get_data_queue() #TODO implement circular queue
 
-    print("beginning send_thread", flush=True)
     send_thread = threading.Thread(target=send_data)
     send_thread.start()
     
-    print("beginning read_data", flush=True)
     read_data()
 
 def read_data():
@@ -110,14 +112,13 @@ def read_data():
     global radio, launchSequenceInitiated, data_queue
 
     if data_queue is None:
-        data_queue = get_data_queue()
+        data_queue = get_data_queue() #TODO implement circular queue
 
     while launchSequenceInitiated:
         data = radio.recieve()  # this returns a serializable dictionary
         
         if data:
             data_queue.put(data)
-            print("Data added to queue:", data, flush=True)
 
 def send_data():
     """
@@ -132,23 +133,18 @@ def send_data():
     while launchSequenceInitiated:
         if not data_queue.empty():
             data = data_queue.get()
-            
-            print("preinterpolation:", flush=True)
-            pprint(data)
 
-            all_interpolated = interpolate_quaternions(data) #[[w1, x1, y1, z1], [w2, x2, y2, z2], ... , [wn, xn, yn, zn]]
+            all_interpolated = interpolate_quaternions(10, data) #[[w1, x1, y1, z1], [w2, x2, y2, z2], ... , [wn, xn, yn, zn]]
             
             print("interpolated DP's:", flush=True)
             pprint(all_interpolated)
 
             #for loop thru combined and emit that way we avoid deadlock
-            print("Sending data to FE:", flush=True)
             for interpolated_quaternion in all_interpolated:
                 socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
                 sleep(.1)
                 
         else:
-            print("queue empty :()")
             # Small sleep to avoid busy-waiting
             threading.Event().wait(0.01)
 

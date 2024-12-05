@@ -20,6 +20,10 @@ class RYLR998_Transmit:
                 #DECODE and return to Flask scope
                 print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
                 pressure = received_data.split("|")[1] #float of pressure
+                
+                self.lora.send_command("AT+MODE=1")
+                
+                time.sleep(0.1) #PLEASE WAIT FOR TRANSMIT ONLY MODE
 
                 return float(pressure) 
 

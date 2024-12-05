@@ -40,7 +40,7 @@ def slerp(q1, q2, t): # math used to interpolate quanterions
     return q1 * cos(theta) + q_perp * sin(theta)
 
 
-def interpolate_quaternions(input_data): # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
+def interpolate_quaternions(fps, input_data): # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
     """
     Interpolates between quaternions in the input data using SLERP and includes the original quaternions.
     
@@ -56,8 +56,7 @@ def interpolate_quaternions(input_data): # This is the method you would call for
         for q in quaternions
     ]
 
-    # Calculate the number of interpolation steps to maintain 10 FPS
-    fps = 10
+    # Calculate the number of interpolation steps to maintain FPS
     num_steps = int(time_delta * fps)
 
     # Combine original and interpolated quaternions
@@ -75,7 +74,7 @@ def interpolate_quaternions(input_data): # This is the method you would call for
         for step in range(1, num_steps):
             t = step / num_steps
             interpolated_quat = slerp(q1, q2, t)
-            combined_quats.append(interpolated_quat)
+            combined_quats.append(interpolated_quat.tolist())
 
         # Ensure the last quaternion of the pair is added only once
         combined_quats.append(q2)

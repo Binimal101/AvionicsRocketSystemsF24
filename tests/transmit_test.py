@@ -1,5 +1,5 @@
-import serial, time
-import reyax_test as reyax
+import serial, time, struct
+import reyax
 
 # Initialize UART using pyserial
 uart_port = "/dev/serial0" #RPI02W
@@ -26,7 +26,8 @@ try:
 except AttributeError:
     print("Unable to retrieve address.")
 
-recipient_address = int(input("Enter recipient address:\n>>> "))
-while input("Test transmission (Y,N)?\n>>> ").lower() == "y":
-    lora.send_data(data = (time_sent := str(time.time())), recipient_address = recipient_address)
-    print(f"message sent at {time_sent}")
+recipient_address = int(input("Enter recipient address (this device addr = 1):\n>>> "))
+
+payload = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".encode()
+for i in range(50):
+    lora.send_data(payload, len(payload), recipient_address=recipient_address)
