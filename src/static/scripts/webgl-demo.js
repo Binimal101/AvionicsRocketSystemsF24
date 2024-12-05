@@ -241,22 +241,25 @@ async function main() {
     let tempX = Number(document.getElementById("input_data").getAttribute("x_in"));
     let tempY = Number(document.getElementById("input_data").getAttribute("y_in"));
     let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
+    
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
     let tempeul = tempquat.toEulerNormalized();
     
-    angleX = tempeul.pitch;
-    angleY = tempeul.roll;
-    angleZ = tempeul.yaw;
+    let angleX = tempeul.pitch;
+    let angleY = tempeul.roll;
+    let angleZ = tempeul.yaw;
+
+    console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
 
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
     document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
     document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
     document.getElementById("zAngle").textContent = radToDeg(angleZ) + " Degrees";
+    
     u_world = m4.xRotate(u_world, angleX);
     u_world = m4.yRotate(u_world, angleY);
     u_world = m4.zRotate(u_world, angleZ);
 
- 
     for (const {bufferInfo, material} of parts) {
       // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
       webglUtils.setBuffersAndAttributes(gl, meshProgramInfo, bufferInfo);
