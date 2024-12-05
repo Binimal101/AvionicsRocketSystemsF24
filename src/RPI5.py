@@ -12,19 +12,16 @@ from flask_socketio import SocketIO, send, emit
 
 from recieve import RYLR998_Recieve
 
-# RYLR998 | If multiple instances progress, load lazily
-radio = RYLR998_Recieve()
-
 load_dotenv(os.getcwd() + "/.env")
 hashedPassword = os.environ.get("hashedPassword")
 
 launchSequenceInitiated = False
 isBroadcasting = False  # Tracks if data is currently being broadcasted
 
-# Shared queue for communication between threads
-data_queue = None
+# Shared queue & radio for communication between threads while reducing proc overhead
+data_queue, radio = None, None
 
-def get_data_queue():
+def get_data_queue(): #lazy load
     global data_queue
 
     if data_queue is None:
@@ -32,12 +29,24 @@ def get_data_queue():
     
     return data_queue
 
+def get_radio(): #lazy load
+    global radio
+
+    if radio is None:
+        radio = RYLR998_Recieve()
+    
+    return radio
+
+
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 # ROUTES
 @app.route("/")
 def index():
+    global radio
+    radio = get_radio()
+
     return render_template("index.html")
 
 @app.route("/visualize")
@@ -100,6 +109,7 @@ def read_data():
         if data:
             data_queue.put(data)
             print("Data added to queue:", data)
+
 def send_data():
     """
     Thread to emit data from the queue to the client.
@@ -110,11 +120,12 @@ def send_data():
         if not data_queue.empty():
             data = data_queue.get()
             
-            combined = interpolate_quaternions(data)
+            all_interpolated = interpolate_quaternions(data) #[[w1, x1, y1, z1], [w2, x2, y2, z2], ... , [wn, xn, yn, zn]]
+            
             #for loop thru combined and emit that way we avoid deadlock
             print("Sending data:", data)
-            for i in combined:
-                socketio.emit("data_send", i)
+            for interpolated_quaternion in all_interpolated:
+                socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
                 sleep(.1)
                 
         else:

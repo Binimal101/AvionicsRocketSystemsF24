@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NJIT Rocketry Systems Portal</title>
-    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='libjs/socket.io.min.js') }}"></script>
     <style>
 
         #error-message {
@@ -114,8 +114,9 @@
         }
     </style>
 </head>
+
 <body>
-    <img id="header-image" src="{{ url_for("static", filename="rocketryLogo.png") }}" alt="Header Image">
+    <img id="header-image" src="{{ url_for('static', filename='images/rocketryLogo.png') }}" alt="Header Image">
     <h1>LOGIN PAGE</h1>
     <label for="password">Launch Key</label>
     <input type="password" id="password" placeholder="">
@@ -152,9 +153,9 @@
 
                 successMessage.textContent = "Login Successful, Setting Up Systems..."
                 successMessage.style.display = "block";  // Show success message
-                /* in anticipation of having to foster a delay before redirecting */
-                
-                socket.emit("request_data", {unneeded : "true"}) //starts emissions from back end
+
+                socket.emit("request_data", {unneeded_data_partition : "true"}) //starts emissions from back end
+
                 window.location.href = "/visualize";  // Redirect to success page
 
             } else {

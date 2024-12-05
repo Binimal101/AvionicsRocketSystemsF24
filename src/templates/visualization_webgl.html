@@ -3,43 +3,46 @@
     <head>
         <meta id="input_data" w_in="0" x_in="0" y_in="0" z_in="0">
         <meta charset="utf-8" />
-        <script src="{{ url_for("static", filename="interface.js") }}"></script>
-        <script src="{{ url_for("static", filename="libjs/webgl_local/webgl-utils.js") }}"></script>
-        <script src=" {{ url_for("static", filename="libjs/webgl_local/m4.js") }}"></script>
+        <script src="{{ url_for('static', filename='scripts/interface.js') }}"></script>
+        <script src="{{ url_for('static', filename='libjs/webgl_local/webgl-utils.js') }}"></script>
+        <script src=" {{ url_for('static', filename='libjs/webgl_local/m4.js') }}"></script>
         <!--<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
         <script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>-->
         
         <!--src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"-->
         <title>WebGL Demo</title>
         <script
-            src="{{ url_for("static", filename="libjs/webgl_local/gl-matrix-min.js") }}"
+            src="{{ url_for('static', filename='libjs/webgl_local/gl-matrix-min.js') }}"
             integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
             crossorigin="anonymous"
             defer>
         </script>
+
         <!-- This needs to be out here or else Jinja won't be able to find it. -->
+
         <script>
-            const initBuffersURL = "{{ url_for('static', filename='init-buffers.js') }}";
-			const drawSceneURL = "{{ url_for('static', filename='draw-scene.js') }}";
+            const initBuffersURL = "{{ url_for('static', filename='scripts/init-buffers.js') }}";
+			const drawSceneURL = "{{ url_for('static', filename='scripts/draw-scene.js') }}";
 			const modelURL = "{{ url_for('static', filename='model/rocket_edited.obj') }}";
-			const fileURL = "{{ url_for('static', filename='goodData.txt') }}";
-			const quatURL = "{{ url_for('static', filename='interpolated_data.txt') }}";
         </script>
-        <script src="{{url_for("static", filename="webgl-demo.js") }}" type="module"></script>
-        <link rel="stylesheet" href="{{ url_for("static", filename="styles.css") }}">
+
+        <script src="{{url_for('static', filename='scripts/webgl-demo.js') }}" type="module"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
+    
     </head>
     <body id="information">
         <script>
 
             const socket = io();
 
+            // WILL BE SENT OVER AT X-FPS, IMMEDIATELY UPDATE VISUALIZATION IN JS-SCOPE
             socket.on("data_send", (response) => {
                     let w = response[0];
                     let x = response[1];
                     let y = response[2];
                     let z = response[3];
                     update(w,x,y,z);
-                })
+            });
     
         </script>
         <div id="angles">

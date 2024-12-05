@@ -1,7 +1,5 @@
 import numpy as np
 from math import acos, sin, cos
-import reyax_test as reyax
-
 
 def slerp(q1, q2, t): # math used to interpolate quanterions
     """
