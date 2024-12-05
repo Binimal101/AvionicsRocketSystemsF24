@@ -30,28 +30,8 @@ void main () {
   gl_FragColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a);
 }`;
 
-const modelPath = "{{ url_for('static', filename='model/rocket_edited.obj') }}";
-const filePath = "{{ url_for('static', filename='goodData.txt') }}";
-const quat_file = "{{ url_for('static', filename='interpolated_data.txt') }}";
+const modelPath = "./static/model/rocket_edited.obj";
 const framerate = 10; // 1/10 of a second.
-
-async function loadRotationData(filePath) {
-  const response = await fetch(filePath);
-  const floatRegex = /-?\d+(\.\d+)/g; // Matches floats, including negatives
-  const text = await response.text();
-  let count = 0;
-  const rotationData = text.split('\n').map(line => {
-      const matches = line.match(floatRegex);
-      //the quaternion data
-      //console.log(count++);
-      //console.log(matches)
-      const [w, x, y, z] = matches.map(Number);//line.split(',').map(Number);
-      let quat = new Quaternion(w, x, y, z);
-      let eul = quat.toEulerNormalized();
-      return { x: eul.pitch, y: eul.roll, z: eul.yaw };
-  });
-  return rotationData;
-}
 
 class Quaternion {
   constructor(w, x, y, z) {
@@ -60,7 +40,6 @@ class Quaternion {
     this.y = y;
     this.z = z;
   }
-
 
   //Quaternion to Euler from Wikipedia (does NOT account for gimbal lock)
   toEulerBasic() {
@@ -95,12 +74,14 @@ class Quaternion {
       angles.pitch = Math.PI/2;
       angles.roll = 0;
     } 
+
     //singularity at south pole (..evil santa is in trouble 🤨)
     else if(test < -0.499) {
       angles.yaw = -2 * Math.atan2(this.x, this.w);
       angles.pitch = -Math.PI/2
       angles.bank = 0;
     } 
+
     else {
       let sqx = this.x * this.x;
       let sqy = this.y * this.y;
@@ -109,6 +90,7 @@ class Quaternion {
       angles.pitch = Math.asin(2 * test);
       angles.roll = Math.atan2(2 * this.x * this.w - 2 * this.y * this.z, 1 - 2 * sqx - 2 * sqz);
     }
+
     return angles;
   }
 
@@ -120,6 +102,7 @@ class Quaternion {
     let sqy = this.y * this.y;
     let sqz = this.z * this.z;
     let sqw = this.w * this.w;
+
     let unit = sqx + sqy + sqz + sqw;
     let test = this.x * this.y + this.z * this.w;
 
@@ -136,11 +119,13 @@ class Quaternion {
       angles.pitch = -Math.PI/2
       angles.bank = 0;
     } 
+
     else {
       angles.yaw = Math.atan2(2 * this.y * this.w - 2 * this.x * this.z, sqx - sqy - sqz + sqw);
       angles.pitch = Math.asin(2 * test);
       angles.roll = Math.atan2(2 * this.x * this.w - 2 * this.y * this.z, -sqx + sqy - sqz + sqw);
     }
+
     return angles;
   }
 
@@ -171,7 +156,7 @@ async function main() {
     return;
   }
 
-  const response = await fetch(modelPath); //RELATIVE URL...
+  const response = await (modelPath); //RELATIVE URL...
   const text = await response.text();
   const data = parseOBJ(text);
 
@@ -205,7 +190,7 @@ async function main() {
     const degrees = radians * (180 / Math.PI);
     return degrees;
   }
-  
+
   let prev = 0;
   const fpsCounter = document.querySelector("#fps");
   let framecounter = 0;
@@ -245,14 +230,6 @@ async function main() {
     webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
     // compute the world matrix once since all parts
     // are at the same space.
-    const { x, y, z } = rotationData[rotationIndex];
-    angleX = x;
-    angleY = y;
-    angleZ = z;
-
-    // Update the rotation index to create a looping effect
-    //rotationIndex = (rotationIndex + 1) % totalRotationData;
-    //rotationIndex = framecounter % totalRotationData;
     
     rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
     
@@ -262,11 +239,7 @@ async function main() {
     let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
     let tempeul = tempquat.toEulerNormalized();
-    //angleX = tempeul.pitch;
-    //angleY = tempeul.roll;
-    //angleZ = tempeul.yaw;
-    //rotationIndex = (rotationIndex + 1);
-    //rotations (mostly for demo, needs to be changed)
+    
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
     document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
     document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
