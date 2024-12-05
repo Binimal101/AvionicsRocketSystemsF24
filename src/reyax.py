@@ -99,20 +99,10 @@ class RYLR998:
         #Spreading Factor, 9=500kz bw, 2=cr 4/6
         print(self.send_command('AT+PARAMETER=7,9,2,12'))
 
-        # Frequency band: 905 MHz
-        print(self.send_command('AT+FREQ=905000000'), flush=True)
+        # Frequency band: 915 MHz
+        print(self.send_command('AT+BAND=915000000'), flush=True)
 
-        # # Preamble length: 12
-        # print(self.send_command('AT+PREAMBLE=12'), flush=True)
-
-        # # Spreading factor: SF7
-        # print(self.send_command('AT+SF=7'), flush=True)
-
-        # # Bandwidth: 500 kHz
-        # print(self.send_command('AT+BW=500'), flush=True)
-
-        # # Error correcting bits : bits 4/(1+CR)
-        # print(self.send_command('AT+CR=2'), flush=True)
+        print(self.send_command('AT+MODE=0'), flush=True) #todo research Mode=2, params
 
         # Transmission power:  20dBm
         print(self.send_command('AT+CRFOP=20'), flush=True)
