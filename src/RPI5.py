@@ -9,6 +9,7 @@ from time import sleep
 
 from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, send, emit
+from flask_cors import CORS
 
 from recieve import RYLR998_Recieve
 
@@ -39,7 +40,9 @@ def get_radio(): #lazy load
 
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+
+CORS(app) #for the singulate JS http request on the frontend for downloading the model of the rocket
+socketio = SocketIO(app, cors_allowed_origins="*") #inappropriate, but we don't have a domain or internet access so it's fine FTMP
 
 # ROUTES
 @app.route("/")

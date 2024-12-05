@@ -156,12 +156,18 @@ async function main() {
     return;
   }
 
-  const response = await (modelPath); //RELATIVE URL...
+  const response = await fetch(modelPath); //RELATIVE URL...
+  
+  if (!response.ok) {
+    throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+  }
+  
   const text = await response.text();
   const data = parseOBJ(text);
 
   // Set clear color to black, fully opaque
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  
   // Clear the color buffer with specified clear color
   gl.clear(gl.COLOR_BUFFER_BIT);
 
