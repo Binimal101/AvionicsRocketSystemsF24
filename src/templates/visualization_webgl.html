@@ -17,6 +17,14 @@
             crossorigin="anonymous"
             defer>
         </script>
+        <!-- This needs to be out here or else Jinja won't be able to find it. -->
+        <script>
+            const initBuffersURL = "{{ url_for('static', filename='init-buffers.js') }}";
+			const drawSceneURL = "{{ url_for('static', filename='draw-scene.js') }}";
+			const modelURL = "{{ url_for('static', filename='model/rocket_edited.obj') }}";
+			const fileURL = "{{ url_for('static', filename='goodData.txt') }}";
+			const quatURL = "{{ url_for('static', filename='interpolated_data.txt') }}";
+        </script>
         <script src="{{url_for("static", filename="webgl-demo.js") }}" type="module"></script>
         <link rel="stylesheet" href="{{ url_for("static", filename="styles.css") }}">
     </head>
@@ -31,7 +39,7 @@
                     let y = response[2];
                     let z = response[3];
                     update(w,x,y,z);
-                }
+                })
     
         </script>
         <div id="angles">
