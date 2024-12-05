@@ -115,18 +115,21 @@ class Quaternion {
   //accounting for gimbal lock (for non normalized quaternions)
   toEulerNonNormalized() {
     let angles = new Euler();
+
     let sqx = this.x * this.x;
     let sqy = this.y * this.y;
     let sqz = this.z * this.z;
     let sqw = this.w * this.w;
     let unit = sqx + sqy + sqz + sqw;
     let test = this.x * this.y + this.z * this.w;
+
     //singularity at north pole (santa's in trouble 😱)
     if(test > 0.499 * unit) {
       angles.yaw = 2 * Math.atan2(this.x, this.w);
       angles.pitch = Math.PI/2;
       angles.roll = 0;
     } 
+
     //singularity at south pole (..evil santa is in trouble 🤨)
     else if(test < -0.499 * unit) {
       angles.yaw = -2 * Math.atan2(this.x, this.w);
@@ -149,80 +152,12 @@ function Euler(roll, pitch, yaw) {
   this.yaw = yaw;
 }
 
-async function readFloatsFromFile(filePath) {
-  try {
-    const response = await fetch(filePath);
-    if (!response.ok) throw new Error("Failed to load the file");
-
-    const text = await response.text();
-
-    const floatRegex = /-?\d+(\.\d+)?/g; // Matches floats, including negatives
-    const lines = text.split("\n"); // Split file into lines
-    const results = [];
-
-    for (const line of lines) {
-      const matches = line.match(floatRegex); // Find all floats in the line
-      
-      if (matches && matches.length >= 4) {
-        // Parse the first three floats
-        const float1 = parseFloat(matches[0]);
-        const float2 = parseFloat(matches[1]);
-        const float3 = parseFloat(matches[2]);
-        const float4 = parseFloat(matches[3]);
-        results.push({ float1, float2, float3, float4 });
-      }
-    }
-    return results;
-  
-  } catch (error) {
-    console.error("Error:", error.message);
-    return null;
-  }
-}
-
-readFloatsFromFile(quat_file).then((data) => {
-  if (!data) {
-    console.error("Error: data not found from file (not sure why this is still here, backing it up but deleting in main)");
-  } else {
-    console.log(data)
-  }
-});
-
 main();
 
 //
 // start here
 //
 async function main() {
-  //loading model 
-
-  //demo controls & values
-  var angleY = 0;
-  var angleX = 0;
-  var angleZ = 0;
-
-  const rotationData = await loadRotationData(quat_file);
-  if (!rotationData) {
-    console.error('Error loading rotation data');
-    return;
-  }
-
-  let rotationIndex = 0;
-  const totalRotationData = rotationData.length;
-  if (rotationData.length > 0) {
-    angleX = rotationData[0].x;
-    angleY = rotationData[0].y;
-    angleZ = rotationData[0].z;
-  }
-
-  for(let dat of rotationData) {
-    console.log([radToDeg(dat.x), radToDeg(dat.y), radToDeg(dat.z)]);
-  }
-
-  // Demo controls
-  function setAngleX(deg) { angleX = deg; return angleX; }
-  function setAngleY(deg) { angleY = deg; return angleY; }
-  function setAngleZ(deg) { angleZ = deg; return angleZ; }
 
   const canvas = document.querySelector("#gl-canvas");
   // Initialize the GL context
@@ -239,6 +174,7 @@ async function main() {
   const response = await fetch(modelPath); //RELATIVE URL...
   const text = await response.text();
   const data = parseOBJ(text);
+
   // Set clear color to black, fully opaque
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   // Clear the color buffer with specified clear color
@@ -269,9 +205,11 @@ async function main() {
     const degrees = radians * (180 / Math.PI);
     return degrees;
   }
+  
   let prev = 0;
   const fpsCounter = document.querySelector("#fps");
   let framecounter = 0;
+
   function render(time) {
     time *= 0.001;  // convert to seconds
     const deltaTime = time - prev;
