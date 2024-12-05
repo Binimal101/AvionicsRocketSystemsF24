@@ -110,9 +110,9 @@ class FlightDataLogger:
             time_delta = values[0]
             quaternions = [x for x in values[1:]] #needed to guarantee type(x) == list
 
-            print("SENDING DATA")
+            print("SENDING DATA", flush=True)
             self.radio.send(time_delta=time_delta, data_points=quaternions)
-            print("DATA SENT")
+            print("DATA SENT", flush=True)
 
     def transmit(self, time_delta: int, quaternion: list): #will change layout in the future when we get better radios
         """

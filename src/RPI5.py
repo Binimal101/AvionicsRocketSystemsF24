@@ -96,9 +96,11 @@ def handle_request_data(data):
 
     data_queue = get_data_queue()
 
+    print("beginning send_thread", flush=True)
     send_thread = threading.Thread(target=send_data)
     send_thread.start()
     
+    print("beginning read_data", flush=True)
     read_data()
 
 def read_data():
@@ -107,31 +109,46 @@ def read_data():
     """
     global radio, launchSequenceInitiated, data_queue
 
+    if data_queue is None:
+        data_queue = get_data_queue()
+
     while launchSequenceInitiated:
-        data = radio.recieve()  # Assume this returns a dictionary
+        data = radio.recieve()  # this returns a serializable dictionary
+        
         if data:
             data_queue.put(data)
-            print("Data added to queue:", data)
+            print("Data added to queue:", data, flush=True)
 
 def send_data():
     """
     Thread to emit data from the queue to the client.
     """
+
     global launchSequenceInitiated, data_queue
+
+    if data_queue is None:
+        data_queue = get_data_queue()
 
     while launchSequenceInitiated:
         if not data_queue.empty():
             data = data_queue.get()
             
+            print("preinterpolation:", flush=True)
+            pprint(data)
+
             all_interpolated = interpolate_quaternions(data) #[[w1, x1, y1, z1], [w2, x2, y2, z2], ... , [wn, xn, yn, zn]]
             
+            print("interpolated DP's:", flush=True)
+            pprint(all_interpolated)
+
             #for loop thru combined and emit that way we avoid deadlock
-            print("Sending data:", data)
+            print("Sending data to FE:", flush=True)
             for interpolated_quaternion in all_interpolated:
                 socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
                 sleep(.1)
                 
         else:
+            print("queue empty :()")
             # Small sleep to avoid busy-waiting
             threading.Event().wait(0.01)
 
