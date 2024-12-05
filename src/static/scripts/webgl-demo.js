@@ -167,7 +167,7 @@ async function main() {
 
   // Set clear color to black, fully opaque
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  
+
   // Clear the color buffer with specified clear color
   gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -236,9 +236,7 @@ async function main() {
     webglUtils.setUniforms(meshProgramInfo, sharedUniforms);
     // compute the world matrix once since all parts
     // are at the same space.
-    
-    rotationIndex = ((framecounter % framerate == 0) ? (rotationIndex + 1) : (rotationIndex));
-    
+        
     let tempW = Number(document.getElementById("input_data").getAttribute("w_in"));
     let tempX = Number(document.getElementById("input_data").getAttribute("x_in"));
     let tempY = Number(document.getElementById("input_data").getAttribute("y_in"));
@@ -246,6 +244,10 @@ async function main() {
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
     let tempeul = tempquat.toEulerNormalized();
     
+    angleX = tempeul.pitch;
+    angleY = tempeul.roll;
+    angleZ = tempeul.yaw;
+
     let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
     document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
     document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
@@ -271,7 +273,9 @@ async function main() {
     framecounter++;
     requestAnimationFrame(render);
   }
+
   requestAnimationFrame(render);
+
 }
 
 function parseOBJ(text) {
@@ -293,8 +297,10 @@ function parseOBJ(text) {
     [],   // texcoords
     [],   // normals
   ];
+
   const materialLibs = [];
   const geometries = [];
+
   let groups = ['default'];
   let geometry;
   let material = 'default';
@@ -313,11 +319,13 @@ function parseOBJ(text) {
       const position = [];
       const texcoord = [];
       const normal = [];
+      
       webglVertexData = [
         position,
         texcoord,
         normal,
       ];
+
       geometry = {
         object,
         groups,
@@ -328,6 +336,7 @@ function parseOBJ(text) {
           normal,
         },
       };
+      
       geometries.push(geometry);
     }
   }
@@ -338,6 +347,7 @@ function parseOBJ(text) {
       if (!objIndexStr) {
         return;
       }
+      
       const objIndex = parseInt(objIndexStr);
       const index = objIndex + (objIndex >= 0 ? 0 : objVertexData[i].length);
       webglVertexData[i].push(...objVertexData[i][index]);
