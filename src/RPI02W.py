@@ -234,9 +234,11 @@ class FlightDataLogger:
                 file.write(json_data)  # Append the JSON data to the log file
 
                 # Add radio transmission for flightPackage every n measurement cycles (self.measurement_modulo is dynamic)
+                print("running cycle", flush=True)
                 if self.measurement_cycle % self.measurement_modulo == 0:
                     #time delta (for one measurement in payload), data
                     self.transmit((time.time()) - start_payload_time, self.flight_package["gyro"]["quaternion"]) #abstracted for actual payload transmission 
+                    print("adding one to payload", flush=True)
                 
                 self.measurement_cycle += 1  # Increment the measurement cycle counter
 
