@@ -3,7 +3,7 @@ import time, struct
 
 #OTHER METRICS
 def getStartMessage():
-    return "beginCollection"
+    return "bc"
 
 def getNumQuaternions() -> int:
     """
