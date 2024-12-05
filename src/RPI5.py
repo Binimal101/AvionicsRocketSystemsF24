@@ -134,4 +134,4 @@ def send_data():
 
 if __name__ == "__main__":
     # Shared queue for communication between threads
-    socketio.run(app, host="127.0.0.1", debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="0.0.0.0", debug=True, allow_unsafe_werkzeug=True)

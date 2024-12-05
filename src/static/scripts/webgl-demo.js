@@ -162,6 +162,7 @@ async function readFloatsFromFile(filePath) {
 
     for (const line of lines) {
       const matches = line.match(floatRegex); // Find all floats in the line
+      
       if (matches && matches.length >= 4) {
         // Parse the first three floats
         const float1 = parseFloat(matches[0]);
@@ -172,6 +173,7 @@ async function readFloatsFromFile(filePath) {
       }
     }
     return results;
+  
   } catch (error) {
     console.error("Error:", error.message);
     return null;
@@ -180,13 +182,11 @@ async function readFloatsFromFile(filePath) {
 
 readFloatsFromFile(quat_file).then((data) => {
   if (!data) {
-    console.error("Error:", error.message);
+    console.error("Error: data not found from file (not sure why this is still here, backing it up but deleting in main)");
   } else {
     console.log(data)
   }
 });
-
-
 
 main();
 
@@ -206,6 +206,7 @@ async function main() {
     console.error('Error loading rotation data');
     return;
   }
+
   let rotationIndex = 0;
   const totalRotationData = rotationData.length;
   if (rotationData.length > 0) {

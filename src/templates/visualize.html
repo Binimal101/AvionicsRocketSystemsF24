@@ -3,6 +3,10 @@
     <head>
         <meta id="input_data" w_in="0" x_in="0" y_in="0" z_in="0">
         <meta charset="utf-8" />
+
+        <!-- Rel path to socketio, works offline -->
+        <script src="{{ url_for('static', filename='libjs/socket.io.min.js') }}"></script>
+
         <script src="{{ url_for('static', filename='scripts/interface.js') }}"></script>
         <script src="{{ url_for('static', filename='libjs/webgl_local/webgl-utils.js') }}"></script>
         <script src=" {{ url_for('static', filename='libjs/webgl_local/m4.js') }}"></script>
@@ -26,7 +30,7 @@
 			const modelURL = "{{ url_for('static', filename='model/rocket_edited.obj') }}";
         </script>
 
-        <script src="{{url_for('static', filename='scripts/webgl-demo.js') }}" type="module"></script>
+        <script src="{{ url_for('static', filename='scripts/webgl-demo.js') }}" type="module"></script>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     
     </head>

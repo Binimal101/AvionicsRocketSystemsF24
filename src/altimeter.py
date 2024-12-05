@@ -371,7 +371,7 @@ class MS5611:
         Calculate altitude based on pressure readings.
  """
 
-        if type(self.PRES) == float and self.PRES > 0:
+        if type(self.PRES) == float and self.PRES < 0:
             return -1 #clean invalid data post-process
         
         altitude = 44330 * (1.0 - numpy.power(self.PRES / sea_level_kPa, 0.1903))
