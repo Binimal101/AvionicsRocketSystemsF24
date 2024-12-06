@@ -34,6 +34,8 @@ class RYLR998_Transmit:
                     print(response)
                     if "," in response:
                         return response.split(",")[2] #TODO check if always <data> block
+                    else:
+                        print()
             
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)
@@ -73,11 +75,13 @@ class RYLR998_Transmit:
 
         #build encodable array
         encodable_array = []
-        if type(dp[0] == list): # multiple quaternions
+        if type(data_points[0]) == list: # multiple quaternions
             for dp in data_points:
                 encodable_array.extend(quaternion_to_short(*dp))
+                
         else: #singular quaternion
             encodable_array.extend(quaternion_to_short(*data_points))
+            print("ENCODED ARRAY {encodable_array}", flush=True)
 
         payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
 

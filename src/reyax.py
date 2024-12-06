@@ -198,12 +198,12 @@ class RYLR998:
                         })
                     
                     #5!
-                    return payload
+                    return payload if payload else None
                 
                 elif response:
-                    print(response.decode())
+                    print(f"Bad response to gyro-decode: {response.decode()}", flush=True)
 
-                time.sleep(0.0001)
+                time.sleep(0.001)
         
 
     def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2):
@@ -213,7 +213,7 @@ class RYLR998:
         data = (f"AT+SEND={recipient_address},{dataSize},").encode() + data + "\r\n".encode()
         self.ser.write(data)
 
-        time.sleep(0.01) #TODO rearrange sleep commands for optimal performance
+        time.sleep(0.01)
         
         response = ''
         while True:

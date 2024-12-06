@@ -76,12 +76,18 @@ class FlightDataLogger:
     def _transmit_process(self, qbuff: mp.Queue):
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
-
+            
+            print(f"qbuff.get has a payload of {payload}, sending...", flush=True)
+            
             time_delta, quaternion = payload
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
-        self.transmit_queue.put((time_delta, quaternion))
+        try:
+            print("in transmit, adding to qbuff...")
+            self.transmit_queue.put((time_delta, quaternion))
+        except:
+            print("queue full, waiting... ", flush=True)
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
@@ -117,7 +123,7 @@ class FlightDataLogger:
                 
                 self.altimeter.update() #sends signal to device to ready new information
 
-                threading.Event().wait(0.018) #tested to be reliable with altimeter values
+                threading.Event().wait(0.02) #tested to be reliable with altimeter values
 
         altimeter_read_thread = threading.Thread(target=readAltimeterValues)
         altimeter_read_thread.start()
