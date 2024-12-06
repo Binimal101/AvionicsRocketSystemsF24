@@ -44,7 +44,7 @@ class Interpolate:
 
         return (q1 * cos(theta) + q_perp * sin(theta)).tolist()
 
-    def interpolate_quaternion(self, time_delta: float, quaternions: list[dict]) -> list: # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
+    def interpolate_quaternion(self, time_delta: float, quaternion) -> list: # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
         """
         Interpolates between quaternions in the input data using SLERP and includes the original quaternions.
         
@@ -53,12 +53,14 @@ class Interpolate:
         """
 
         if self.lastquaternion is None:
-            return [quaternions]
+            self.lastquaternion = quaternion
+            return [quaternion]
         
         # Convert quaternion dictionaries to numpy arrays
+            
         quat_array = [
-            [q["rotation_w"], q["rotation_x"], q["rotation_y"], q["rotation_z"]]
-            for q in (self.lastquaternion, *quaternions)
+            self.lastquaternion, 
+            [quaternion["rotation_w"], quaternion["rotation_x"], quaternion["rotation_y"], quaternion["rotation_z"]]
         ]
 
         # Calculate the number of interpolation steps to maintain 10 FPS

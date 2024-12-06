@@ -13,7 +13,7 @@ from flask_cors import CORS
 
 from recieve import RYLR998_Recieve
 
-FPS = 20
+FPS = 30
 
 load_dotenv(os.getcwd() + "/.env")
 hashedPassword = os.environ.get("hashedPassword")
@@ -150,9 +150,8 @@ def send_data():
             #for loop thru combined and emit that way we avoid deadlock
             for interpolated_quaternion in all_interpolated:
                 socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
-                sleep(.1)
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
-                
+                sleep(0.01) #create PID loop for this
         else:
             # Small sleep to avoid busy-waiting
             threading.Event().wait(0.01)

@@ -30,7 +30,7 @@ class FlightDataLogger:
         thread_queue = self.setup_hardware() #avoids b2b sleep hassle for setting up configs
         [x.join() for x in thread_queue]
         
-        self.transmit_queue = mp.Queue(60) #arbitrary limit of 60 quaternion, delta pairs
+        self.transmit_queue = mp.Queue()
         self.transmit_process = mp.Process(target=self._transmit_process, args=(self.transmit_queue,))
         self.transmit_process.start()
 
@@ -84,7 +84,6 @@ class FlightDataLogger:
 
     def transmit(self, time_delta, quaternion):
         try:
-            print("in transmit, adding to qbuff...")
             self.transmit_queue.put((time_delta, quaternion))
         except:
             print("queue full, waiting... ", flush=True)
