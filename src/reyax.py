@@ -94,7 +94,7 @@ class RYLR998:
         print("Configuring RYLR998...")
 
         #Spreading Factor, 9=500kz bw, 2=cr 4/6
-        print("AT+PARAMETER", self.send_command('AT+PARAMETER=7,9,2,12'))
+        print("AT+PARAMETER", self.send_command('AT+PARAMETER=7,9,2,12'), flush=True)
 
         # Frequency band: 915 MHz
         print("AT+BAND", self.send_command('AT+BAND=915000000'), flush=True)
@@ -151,7 +151,6 @@ class RYLR998:
         while True:
             if self.ser.in_waiting:
                 response = self.ser.readline()
-                print(f"read {response}")
 
                 if response:
 
@@ -180,7 +179,7 @@ class RYLR998:
                         cur_index += 1     
 
                     if comma_ct1 != 2 or comma_ct2 != 2:
-                        print("err, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}")
+                        print("ERROR, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}", flush=True)
                         continue
 
 
@@ -197,8 +196,6 @@ class RYLR998:
                             "rotation_y" : quaternion[2],
                             "rotation_z" : quaternion[3],
                         })
-
-                    print("data parsed from payload: ", data)
                     
                     #5!
                     return payload
@@ -250,10 +247,10 @@ class RYLR998:
         response = self.send_command(command)
         
         if 'OK' in response:
-            print(f"Network ID set to {network_id}")
+            print(f"Network ID set to {network_id}", flush=True)
             self.network_id = network_id
         else:
-            print(f"Failed to set Network ID: {response}")
+            print(f"Failed to set Network ID: {response}", flush=True)
 
     def set_address(self, address):
         """
@@ -264,10 +261,10 @@ class RYLR998:
         response = self.send_command(command)
         
         if 'OK' in response:
-            print(f"Address set to {address}")
+            print(f"Address set to {address}", flush=True)
             self.address = address
         else:
-            print(f"Failed to set Address: {response}")
+            print(f"Failed to set Address: {response}", flush=True)
 
     def close(self):
         """

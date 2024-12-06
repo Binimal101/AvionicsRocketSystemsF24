@@ -12,18 +12,14 @@ class RYLR998_Transmit:
         self.ser = self.lora.ser # for more direct access to device
 
     def wait_for_start_message(self) -> float:
-        print("WAITING FOR START COMMAND FROM BASE CONTROL...")
+        print("WAITING FOR START COMMAND FROM BASE CONTROL...", flush=True)
         while True: #blocks data collection execution in outer scope
             received_data = self.read_data()
             
             if received_data and getStartMessage() in received_data: #start message here soley to lessen error potential in comms
                 #DECODE and return to Flask scope
-                print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
+                print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...", flush=True)
                 pressure = received_data.split("|")[1] #float of pressure
-                
-                self.lora.send_command("AT+MODE=1")
-                
-                time.sleep(0.1) #PLEASE WAIT FOR TRANSMIT ONLY MODE
 
                 return float(pressure) 
 
