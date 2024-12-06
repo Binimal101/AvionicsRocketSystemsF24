@@ -187,7 +187,13 @@ class RYLR998:
                         continue
 
                     #3
-                    data = struct.unpack(getPackFormat(), response[start_index:end_index])
+                    try:
+                        data = struct.unpack(getPackFormat(), response[start_index:end_index])
+                    except Exception as e:
+                        if "struct.error" in str(e):
+                            print("Error with package size, continuing as normal...", flush=True)
+                        else:
+                            print(f"Unkown Error in Reyax.py READ_DECODED_DATA, {e}, continuing as normal", flush=True)
 
                     #4                    
                     payload.append(short_to_time_delta(data[0])) #time_delta
@@ -205,6 +211,7 @@ class RYLR998:
                 
                 elif response:
                     print(f"Bad response to gyro-decode: {response.decode()}", flush=True)
+                    
         #TODO should sleep?
 
     def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2):
