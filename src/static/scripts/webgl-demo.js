@@ -41,6 +41,15 @@ class Quaternion {
     this.z = z;
   }
 
+  NormalizeQuaternion() {
+    const norm = Math.sqrt(this.w * this.w + this.x * this.x + this.y * this.y + this.z * this.z);
+    // Normalize quaternion
+    this.w /= norm;
+    this.x /= norm;
+    this.y /= norm;
+    this.z /= norm;
+  }
+
   //Quaternion to Euler from Wikipedia (does NOT account for gimbal lock)
   toEulerBasic() {
     let angles = new Euler();
@@ -243,22 +252,41 @@ async function main() {
     let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
     
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
-    let tempeul = tempquat.toEulerNormalized();
+    tempquat.NormalizeQuaternion();
+    //let tempeul = tempquat.toEulerNormalized();
     
-    let angleX = tempeul.pitch;
-    let angleY = tempeul.roll;
-    let angleZ = tempeul.yaw;
+    let angleW = tempquat.w;
+    let angleX = tempquat.x;
+    let angleY = tempquat.y;
+    let angleZ = tempquat.z;
 
     console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
-
-    let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
-    document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
+    //let qz = tempquat.w, qx = tempquat.x, qy = tempquat.y, qz = tempquat.z;
+    //apply rotation
+    let u_world = new Float32Array([
+      1 - 2 * (angleY * angleY + angleZ * angleZ), 2 * (angleX * angleY - angleZ * angleW),     2 * (angleX * angleZ + angleY * angleW),     0,
+      2 * (angleX * angleY + angleZ * angleW),     1 - 2 * (angleX * angleX + angleZ * angleZ), 2 * (angleY * angleZ - angleX * angleW),     0,
+      2 * (angleX * angleZ - angleY * angleW),     2 * (angleY * angleZ + angleX * angleW),     1 - 2 * (angleX * angleX + angleY * angleY), 0,
+      0,                                           0,                                           0,                                           1
+    ]);
+    document.getElementById("wAngle").textContent = qw;
+    document.getElementById("xAngle").textContent = qx;
+    document.getElementById("yAngle").textContent = qy;
+    document.getElementById("zAngle").textContent = qz;
+    /*let u_world = new Float32Array([
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1]);*///make empty rotation matrix
+    
+    
+      /*document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
     document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
     document.getElementById("zAngle").textContent = radToDeg(angleZ) + " Degrees";
     
     u_world = m4.xRotate(u_world, angleX);
     u_world = m4.yRotate(u_world, angleY);
-    u_world = m4.zRotate(u_world, angleZ);
+    u_world = m4.zRotate(u_world, angleZ);*/
 
     for (const {bufferInfo, material} of parts) {
       // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
