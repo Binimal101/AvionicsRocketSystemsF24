@@ -44,6 +44,7 @@ class Quaternion {
   NormalizeQuaternion() {
     const norm = Math.sqrt(this.w * this.w + this.x * this.x + this.y * this.y + this.z * this.z);
     // Normalize quaternion
+    if(norm == 0) return;
     this.w /= norm;
     this.x /= norm;
     this.y /= norm;
@@ -260,7 +261,7 @@ async function main() {
     let angleY = tempquat.y;
     let angleZ = tempquat.z;
 
-    console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
+    //console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
     //let qz = tempquat.w, qx = tempquat.x, qy = tempquat.y, qz = tempquat.z;
     //apply rotation
     let u_world = new Float32Array([
@@ -269,10 +270,10 @@ async function main() {
       2 * (angleX * angleZ - angleY * angleW),     2 * (angleY * angleZ + angleX * angleW),     1 - 2 * (angleX * angleX + angleY * angleY), 0,
       0,                                           0,                                           0,                                           1
     ]);
-    document.getElementById("wAngle").textContent = qw;
-    document.getElementById("xAngle").textContent = qx;
-    document.getElementById("yAngle").textContent = qy;
-    document.getElementById("zAngle").textContent = qz;
+    document.getElementById("wAngle").textContent = angleW;
+    document.getElementById("xAngle").textContent = angleX;
+    document.getElementById("yAngle").textContent = angleY;
+    document.getElementById("zAngle").textContent = angleZ;
     /*let u_world = new Float32Array([
       1, 0, 0, 0,
       0, 1, 0, 0,
