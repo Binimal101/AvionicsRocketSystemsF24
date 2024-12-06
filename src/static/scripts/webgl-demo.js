@@ -262,7 +262,6 @@ async function main() {
     let angleZ = tempquat.z;
 
     //console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
-    //let qz = tempquat.w, qx = tempquat.x, qy = tempquat.y, qz = tempquat.z;
     //apply rotation
     let u_world = new Float32Array([
       1 - 2 * (angleY * angleY + angleZ * angleZ), 2 * (angleX * angleY - angleZ * angleW),     2 * (angleX * angleZ + angleY * angleW),     0,
@@ -274,20 +273,6 @@ async function main() {
     document.getElementById("xAngle").textContent = angleX;
     document.getElementById("yAngle").textContent = angleY;
     document.getElementById("zAngle").textContent = angleZ;
-    /*let u_world = new Float32Array([
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1]);*///make empty rotation matrix
-    
-    
-      /*document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
-    document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
-    document.getElementById("zAngle").textContent = radToDeg(angleZ) + " Degrees";
-    
-    u_world = m4.xRotate(u_world, angleX);
-    u_world = m4.yRotate(u_world, angleY);
-    u_world = m4.zRotate(u_world, angleZ);*/
 
     for (const {bufferInfo, material} of parts) {
       // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer
