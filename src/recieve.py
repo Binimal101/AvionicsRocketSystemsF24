@@ -14,13 +14,16 @@ class RYLR998_Recieve:
         """
         Send message to rocket to begin data_logging
         """
+        tries = 5 #99.99999% sure will always fall through, just once is good enough for 80% of trials
 
-        pressure_payload = str(pressure)
-        payload = f"{getStartMessage()}|{pressure_payload}"
+        for _ in range(tries):
+            pressure_payload = str(pressure)
+            payload = f"{getStartMessage()}|{pressure_payload}"
 
-        message = f"AT+SEND={RPI02W_address},{len(payload)},{payload}"
-        response = self.RYLR998.send_command(message)
-        
+            message = f"AT+SEND={RPI02W_address},{len(payload)},{payload}"
+            response = self.RYLR998.send_command(message)
+            print(f"Tried to send start cmd, response: {response}", flush=True)
+
         return response
 
     def recieve(self):

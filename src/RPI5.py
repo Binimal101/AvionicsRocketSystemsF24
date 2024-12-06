@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import threading
 from queue import Queue
-from interpolation import interpolate_quaternions
+from interpolation import Interpolate
 from time import sleep
 
 from flask import Flask, render_template, request, url_for
@@ -13,6 +13,8 @@ from flask_cors import CORS
 
 from recieve import RYLR998_Recieve
 
+FPS = 30
+
 load_dotenv(os.getcwd() + "/.env")
 hashedPassword = os.environ.get("hashedPassword")
 
@@ -20,7 +22,7 @@ launchSequenceInitiated = False
 isBroadcasting = False  # Tracks if data is currently being broadcasted
 
 # Shared queue & radio for communication between threads while reducing proc overhead
-data_queue, radio = None, None
+data_queue, radio, interpolator = None, None, None
 
 def get_data_queue(): #lazy load
     global data_queue
@@ -38,6 +40,12 @@ def get_radio(): #lazy load
     
     return radio
 
+def get_interpolation_medium():
+    global interpolator
+    if interpolator is None:
+        interpolator = Interpolate(FPS)
+    
+    return interpolator
 
 app = Flask(__name__)
 
@@ -125,25 +133,34 @@ def send_data():
     Thread to emit data from the queue to the client.
     """
 
-    global launchSequenceInitiated, data_queue
+    global launchSequenceInitiated, data_queue, interpolator
 
-    if data_queue is None:
-        data_queue = get_data_queue()
+    data_queue = get_data_queue()
+    interpolator = get_interpolation_medium()
 
     while launchSequenceInitiated:
         if not data_queue.empty():
             data = data_queue.get()
 
-            all_interpolated = interpolate_quaternions(10, data) #[[w1, x1, y1, z1], [w2, x2, y2, z2], ... , [wn, xn, yn, zn]]
-            
+            all_interpolated = interpolator.interpolate_quaternion(data[0], data[1]) #[0]time_delta, [1]only one quaternion type==dict
+
             print("interpolated DP's:", flush=True)
             pprint(all_interpolated)
 
-            #for loop thru combined and emit that way we avoid deadlock
+            if type(all_interpolated[0]) == float: #1d [], first iter
+                socketio.emit("data_send", all_interpolated)
+                print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
+                sleep(0.01) #create PID loop for this
+                continue
+
             for interpolated_quaternion in all_interpolated:
-                socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
-                sleep(.1)
-                
+
+                if not isinstance(interpolated_quaternion, list): #if is np.array, make list
+                    interpolated_quaternion = interpolated_quaternion.tolist()
+
+                socketio.emit("data_send", interpolated_quaternion) #[w, x, y, z]
+                print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
+                sleep(0.01) #create PID loop for this
         else:
             # Small sleep to avoid busy-waiting
             threading.Event().wait(0.01)

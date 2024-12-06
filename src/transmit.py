@@ -12,18 +12,14 @@ class RYLR998_Transmit:
         self.ser = self.lora.ser # for more direct access to device
 
     def wait_for_start_message(self) -> float:
-        print("WAITING FOR START COMMAND FROM BASE CONTROL...")
+        print("WAITING FOR START COMMAND FROM BASE CONTROL...", flush=True)
         while True: #blocks data collection execution in outer scope
             received_data = self.read_data()
             
             if received_data and getStartMessage() in received_data: #start message here soley to lessen error potential in comms
                 #DECODE and return to Flask scope
-                print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...")
+                print("RECIEVED, ENTERING DATA COLLECTION AND TRANSMISSION...", flush=True)
                 pressure = received_data.split("|")[1] #float of pressure
-                
-                self.lora.send_command("AT+MODE=1")
-                
-                time.sleep(0.1) #PLEASE WAIT FOR TRANSMIT ONLY MODE
 
                 return float(pressure) 
 
@@ -34,14 +30,14 @@ class RYLR998_Transmit:
         while True:
             if self.ser.in_waiting:
                 response = self.ser.readline().decode().strip()
-                if response:
-                    print(response)
-                    if "," in response:
+                if response and "," in response:
+                    try:
                         return response.split(",")[2] #TODO check if always <data> block
-            
+                    except: #has never happened in testing, but will circumvent in case it ever happens 
+                        continue        
+
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)
-        print(f"sending data: {bytestr}", flush=True)
         return self.lora.send_data(data = bytestr, dataSize = struct.calcsize(getPackFormat()))
 
     def encode(self, time_delta: int, data_points: list) -> bytes:
@@ -77,10 +73,13 @@ class RYLR998_Transmit:
 
         #build encodable array
         encodable_array = []
-        for dp in data_points:
-            encodable_array.extend(quaternion_to_short(*dp))
+        if type(data_points[0]) == list: # multiple quaternions
+            for dp in data_points:
+                encodable_array.extend(quaternion_to_short(*dp))
+
+        else: #singular quaternion
+            encodable_array.extend(quaternion_to_short(*data_points))
 
         payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
 
-        print(payload)
         return payload

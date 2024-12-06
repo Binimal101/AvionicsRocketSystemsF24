@@ -9,8 +9,7 @@ def getNumQuaternions() -> int:
     """
     Modifying this will affect how many quaternions are being sent and recieved on either end
     """
-    return 8
-
+    return 1
 
 def getPackFormat():
     #msb <- lsb
@@ -79,12 +78,12 @@ class RYLR998:
         
         # Configure network ID if provided
         if network_id is not None:
-            print("\nsetting NWID")
+            print("\nsetting NWID", flush=True)
             self.set_network_id(network_id)
         
         # Configure address if provided
         if address is not None:
-            print("\nsetting ADDR")
+            print("\nsetting ADDR", flush=True)
             self.set_address(address)
 
     def configure_module(self):
@@ -92,20 +91,18 @@ class RYLR998:
         Configure the module with hardcoded settings optimal for rocket telemetry
         """
 
-        #TODO use proper syntax for updating BW, CR, CRFOP, and PREAMBLE
-
         print("Configuring RYLR998...")
 
         #Spreading Factor, 9=500kz bw, 2=cr 4/6
-        print(self.send_command('AT+PARAMETER=7,9,2,12'))
+        print("AT+PARAMETER", self.send_command('AT+PARAMETER=7,9,2,12'), flush=True)
 
         # Frequency band: 915 MHz
-        print(self.send_command('AT+BAND=915000000'), flush=True)
+        print("AT+BAND", self.send_command('AT+BAND=915000000'), flush=True)
 
-        print(self.send_command('AT+MODE=0'), flush=True) #todo research Mode=2, params
+        print("AT+MODE", self.send_command('AT+MODE=0'), flush=True) #transmit IMMEDIATELY
 
         # Transmission power:  20dBm
-        print(self.send_command('AT+CRFOP=20'), flush=True)
+        print("AT+CRFOP", self.send_command('AT+CRFOP=20'), flush=True)
 
         print("Config complete.")
     
@@ -154,7 +151,6 @@ class RYLR998:
         while True:
             if self.ser.in_waiting:
                 response = self.ser.readline()
-                print(f"read {response}")
 
                 if response:
 
@@ -183,12 +179,24 @@ class RYLR998:
                         cur_index += 1     
 
                     if comma_ct1 != 2 or comma_ct2 != 2:
-                        print("err, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}")
+                        print(f"ERROR, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}", flush=True)
+                        continue
+                    
+                    elif start_index == end_index:
+                        print(f"No data found in response: {response}")
                         continue
 
-
                     #3
-                    data = struct.unpack(getPackFormat(), response[start_index:end_index])
+                    try:
+                        data = struct.unpack(getPackFormat(), response[start_index:end_index])
+                        
+                    except Exception as e:
+                        if "unpack" in str(e):
+                            print("Error with package size (likely corruption), continuing as normal...", flush=True)
+                            continue
+                        else:
+                            print(f"Unkown Error in Reyax.py READ_DECODED_DATA, {e}, continuing as normal", flush=True)
+                            continue
 
                     #4                    
                     payload.append(short_to_time_delta(data[0])) #time_delta
@@ -200,16 +208,14 @@ class RYLR998:
                             "rotation_y" : quaternion[2],
                             "rotation_z" : quaternion[3],
                         })
-
-                    print("data parsed from payload: ", data)
+                    
                     #5!
                     return payload
                 
                 elif response:
-                    print(response.decode())
+                    print(f"Bad response to gyro-decode: {response.decode()}", flush=True)
 
-                time.sleep(0.0001)
-        
+        #TODO should sleep?
 
     def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2):
         """
@@ -218,7 +224,7 @@ class RYLR998:
         data = (f"AT+SEND={recipient_address},{dataSize},").encode() + data + "\r\n".encode()
         self.ser.write(data)
 
-        time.sleep(0.01) #TODO rearrange sleep commands for optimal performance
+        time.sleep(0.01)
         
         response = ''
         while True:
@@ -252,10 +258,10 @@ class RYLR998:
         response = self.send_command(command)
         
         if 'OK' in response:
-            print(f"Network ID set to {network_id}")
+            print(f"Network ID set to {network_id}", flush=True)
             self.network_id = network_id
         else:
-            print(f"Failed to set Network ID: {response}")
+            print(f"Failed to set Network ID: {response}", flush=True)
 
     def set_address(self, address):
         """
@@ -266,10 +272,10 @@ class RYLR998:
         response = self.send_command(command)
         
         if 'OK' in response:
-            print(f"Address set to {address}")
+            print(f"Address set to {address}", flush=True)
             self.address = address
         else:
-            print(f"Failed to set Address: {response}")
+            print(f"Failed to set Address: {response}", flush=True)
 
     def close(self):
         """
