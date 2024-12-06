@@ -9,8 +9,7 @@ def getNumQuaternions() -> int:
     """
     Modifying this will affect how many quaternions are being sent and recieved on either end
     """
-    return 8
-
+    return 1
 
 def getPackFormat():
     #msb <- lsb
@@ -92,20 +91,18 @@ class RYLR998:
         Configure the module with hardcoded settings optimal for rocket telemetry
         """
 
-        #TODO use proper syntax for updating BW, CR, CRFOP, and PREAMBLE
-
         print("Configuring RYLR998...")
 
         #Spreading Factor, 9=500kz bw, 2=cr 4/6
-        print(self.send_command('AT+PARAMETER=7,9,2,12'))
+        print("AT+PARAMETER", self.send_command('AT+PARAMETER=7,9,2,12'))
 
         # Frequency band: 915 MHz
-        print(self.send_command('AT+BAND=915000000'), flush=True)
+        print("AT+BAND", self.send_command('AT+BAND=915000000'), flush=True)
 
-        print(self.send_command('AT+MODE=0'), flush=True) #todo research Mode=2, params
+        print("AT+MODE", self.send_command('AT+MODE=0'), flush=True) #transmit IMMEDIATELY
 
         # Transmission power:  20dBm
-        print(self.send_command('AT+CRFOP=20'), flush=True)
+        print("AT+CRFOP", self.send_command('AT+CRFOP=20'), flush=True)
 
         print("Config complete.")
     
@@ -202,6 +199,7 @@ class RYLR998:
                         })
 
                     print("data parsed from payload: ", data)
+                    
                     #5!
                     return payload
                 
