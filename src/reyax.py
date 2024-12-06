@@ -78,12 +78,12 @@ class RYLR998:
         
         # Configure network ID if provided
         if network_id is not None:
-            print("\nsetting NWID")
+            print("\nsetting NWID", flush=True)
             self.set_network_id(network_id)
         
         # Configure address if provided
         if address is not None:
-            print("\nsetting ADDR")
+            print("\nsetting ADDR", flush=True)
             self.set_address(address)
 
     def configure_module(self):
@@ -179,9 +179,12 @@ class RYLR998:
                         cur_index += 1     
 
                     if comma_ct1 != 2 or comma_ct2 != 2:
-                        print("ERROR, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}", flush=True)
+                        print(f"ERROR, cc1:{comma_ct1}, cc2:{comma_ct2}, payload: {response}", flush=True)
                         continue
-
+                    
+                    elif start_index == end_index:
+                        print(f"No data found in response: {response}")
+                        continue
 
                     #3
                     data = struct.unpack(getPackFormat(), response[start_index:end_index])
@@ -198,13 +201,11 @@ class RYLR998:
                         })
                     
                     #5!
-                    return payload if payload else None
+                    return payload
                 
                 elif response:
                     print(f"Bad response to gyro-decode: {response.decode()}", flush=True)
-
-                time.sleep(0.001)
-        
+        #TODO should sleep?
 
     def send_data(self, data: bytes, dataSize: int, recipient_address: int = 2):
         """
