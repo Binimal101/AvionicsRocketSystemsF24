@@ -76,17 +76,16 @@ class FlightDataLogger:
     def _transmit_process(self, qbuff: mp.Queue):
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
-            
-            print(f"qbuff.get has a payload of {payload}, sending...", flush=True)
-            
+                        
             time_delta, quaternion = payload
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
         try:
             self.transmit_queue.put((time_delta, quaternion))
+            print(f"qbuff approx size: {self.transmit_queue.qsize()}", flush=True)
         except:
-            print("queue full, waiting... ", flush=True)
+            pass
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()

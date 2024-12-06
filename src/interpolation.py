@@ -6,7 +6,7 @@ class Interpolate:
         self.lastquaternion = None
         self.fps = fps
 
-    def slerp(q1: list, q2: list, t) -> list: # math used to interpolate quanterions
+    def slerp(self, q1: list, q2: list, t) -> list: # math used to interpolate quanterions
         """
         Perform Spherical Linear Interpolation (SLERP) between two quaternions.
         
@@ -51,7 +51,7 @@ class Interpolate:
         :param input_data: List containing timeDelta and a sequence of quaternion dictionaries.
         :return: List of quaternions including both original and interpolated quaternions.
         """
-
+        
         if self.lastquaternion is None:
             self.lastquaternion = quaternion
             return [quaternion]

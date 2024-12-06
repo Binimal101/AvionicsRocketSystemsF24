@@ -30,16 +30,14 @@ class RYLR998_Transmit:
         while True:
             if self.ser.in_waiting:
                 response = self.ser.readline().decode().strip()
-                if response:
-                    print(response)
-                    if "," in response:
+                if response and "," in response:
+                    try:
                         return response.split(",")[2] #TODO check if always <data> block
-                    else:
-                        print()
-            
+                    except: #has never happened in testing, but will circumvent in case it ever happens 
+                        continue        
+
     def send(self, time_delta, data_points: list) -> bool:
         bytestr = self.encode(time_delta, data_points)
-        print(f"sending data: {bytestr}", flush=True)
         return self.lora.send_data(data = bytestr, dataSize = struct.calcsize(getPackFormat()))
 
     def encode(self, time_delta: int, data_points: list) -> bytes:
@@ -84,5 +82,4 @@ class RYLR998_Transmit:
 
         payload = struct.pack(getPackFormat(), time_delta_to_short(time_delta), *encodable_array)
 
-        print(payload)
         return payload
