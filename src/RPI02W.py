@@ -4,7 +4,6 @@ It retrieves sensor data and writes it to a log file for later analysis.
 """
 
 #built-in
-from pprint import pprint
 import threading
 import multiprocessing as mp
 import json, time, os, datetime
@@ -15,12 +14,24 @@ import board, adafruit_bno055
 #files
 from altimeter import MS5611
 from transmit import RYLR998_Transmit
+from camera import start_camera
 
 #sleep timers
 data_collection_sleep_timer = 0.008 #TODO test
 
 altimeter_update_sleep_timer = 0.01 #tested
 sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
+
+def fixQuaternionRotatation(quaternion: list) -> list:
+    """
+    fixes axes so that data is wrt rocket, not sensor
+
+    :param quaternion: [w,x,y,z] wrt sensor, through testing, 
+    
+    TODO test: quaternion should be [w,y,z,x] wrt rocket?
+    """
+
+    return quaternion
 
 class FlightDataLogger:
     def __init__(self):
@@ -74,7 +85,6 @@ class FlightDataLogger:
         return threads #joined in outer scope
     
     def _transmit_process(self, qbuff: mp.Queue):
-
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
 
@@ -82,7 +92,6 @@ class FlightDataLogger:
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
-
         try:
             self.transmit_queue.put((time_delta, quaternion))
         except:
@@ -143,6 +152,8 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
+        start_camera() #Popen's a subprocess for recording data, t=0 ~ self.start_time
+
         # Open a log file to store flight data, using the current date for naming
         with open(f"{file_path}", "a") as file:
             while True:  # Main loop for continuous data collection
@@ -162,7 +173,7 @@ class FlightDataLogger:
                     continue #NoneType encountered in readloop
                 
                 self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
-                self.flight_package["gyro"]["radialVelocity"] = list(self.gyroscope.gyro)
+                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotatation(list(self.gyroscope.gyro))
                 self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
                 self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
