@@ -42,7 +42,7 @@ class Interpolate:
         q_perp = q2 - q1 * dot
         q_perp /= np.linalg.norm(q_perp)
 
-        return (q1 * cos(theta) + q_perp * sin(theta)).tolist()
+        return (q1 * cos(theta) + q_perp * sin(theta))
 
     def interpolate_quaternion(self, time_delta: float, quaternion) -> list: # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
         """

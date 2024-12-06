@@ -22,8 +22,6 @@ data_collection_sleep_timer = 0.008 #TODO test
 altimeter_update_sleep_timer = 0.01 #tested
 sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
 
-x = 0
-
 class FlightDataLogger:
     def __init__(self):
         print("Setting up measurement devices")
@@ -76,22 +74,17 @@ class FlightDataLogger:
         return threads #joined in outer scope
     
     def _transmit_process(self, qbuff: mp.Queue):
-        x = 0
 
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
-            x += 1
-            print(f"sending data -> RPI5, datasentCT = {x}", flush=True)
+
             time_delta, quaternion = payload
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
-        global x
-        x += 1
+
         try:
-            print(f"putting data into transmit queue, dataputCT = {x}", flush=True)
             self.transmit_queue.put((time_delta, quaternion))
-            
         except:
             pass
 

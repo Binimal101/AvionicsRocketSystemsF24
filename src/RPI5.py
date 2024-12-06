@@ -149,7 +149,11 @@ def send_data():
 
             #for loop thru combined and emit that way we avoid deadlock
             for interpolated_quaternion in all_interpolated:
-                socketio.emit("data_send", interpolated_quaternion) #[x, x, y, z]
+
+                if not isinstance(interpolated_quaternion, list): #if is np.array, make list
+                    interpolated_quaternion = interpolated_quaternion.tolist()
+
+                socketio.emit("data_send", interpolated_quaternion) #[w, x, y, z]
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
                 sleep(0.01) #create PID loop for this
         else:
