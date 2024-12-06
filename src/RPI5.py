@@ -147,7 +147,12 @@ def send_data():
             print("interpolated DP's:", flush=True)
             pprint(all_interpolated)
 
-            #for loop thru combined and emit that way we avoid deadlock
+            if type(all_interpolated[0]) == float: #1d [], first iter
+                socketio.emit("data_send", all_interpolated)
+                print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
+                sleep(0.01) #create PID loop for this
+                continue
+
             for interpolated_quaternion in all_interpolated:
 
                 if not isinstance(interpolated_quaternion, list): #if is np.array, make list
