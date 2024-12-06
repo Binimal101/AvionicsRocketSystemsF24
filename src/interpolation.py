@@ -52,15 +52,17 @@ class Interpolate:
         :return: List of quaternions including both original and interpolated quaternions.
         """
         
+        quaternion = [quaternion["rotation_w"], quaternion["rotation_x"], quaternion["rotation_y"], quaternion["rotation_z"]]
+
         if self.lastquaternion is None:
             self.lastquaternion = quaternion
-            return [quaternion]
+            return quaternion
         
         # Convert quaternion dictionaries to numpy arrays
             
         quat_array = [
             self.lastquaternion, 
-            [quaternion["rotation_w"], quaternion["rotation_x"], quaternion["rotation_y"], quaternion["rotation_z"]]
+            quaternion
         ]
 
         # Calculate the number of interpolation steps to maintain 10 FPS
@@ -85,6 +87,7 @@ class Interpolate:
 
             # Ensure the last quaternion of the pair is added only once
             combined_quats.append(q2)
-            self.lastquaternion = q2
+        
+        self.lastquaternion = q2 #last value of q2
 
         return combined_quats
