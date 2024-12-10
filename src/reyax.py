@@ -106,7 +106,7 @@ class RYLR998:
 
         print("Config complete.")
     
-    def send_command(self, command): #TODO is it more efficient to disregard ser.read and send ignorantly?
+    def send_command(self, command, retry=1):
         """
         Send an AT command and return the response.
         """
@@ -122,10 +122,12 @@ class RYLR998:
                     break
             else:
                 break
+
         response = response.strip()
         if 'ERROR' in response:
-            raise RuntimeError(f"Command failed: {command}, Response: {response}")
-        
+            print(f"ERROR running command {command}: {response}, retrying {retry} more times", flush=True)  
+            self.send_command(command, retry-1)
+
         return response
 
     def read_decoded_data(self) -> dict:

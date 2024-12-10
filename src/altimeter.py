@@ -301,9 +301,10 @@ class MS5611:
             self._read_temperature()
 
             self._calculate_pressure_and_temperature()
+
         except Exception as e:
             logging.error("Error updating sensor data: %s", e)
-            raise
+            print(f"ALTIMETER UPDATE FAILURE, {e}", flush=True)
 
     def returnPressure(self):
         """
@@ -317,7 +318,7 @@ class MS5611:
             return f'{self.PRES:.3f}'
         except Exception as e:
             logging.error("Error returning pressure value: %s", e)
-            raise
+            print(f"ALTIMETER RETURN PRESSURE FAILURE, {e}", flush=True)
 
     def returnTemperature(self):
         """
@@ -331,7 +332,8 @@ class MS5611:
             return f'{self.TEMP:.2f}'
         except Exception as e:
             logging.error("Error returning temperature value: %s", e)
-            raise
+            print(f"ALTIMETER RETURN TEMPERATURE FAILURE, {e}", flush=True)
+
 
     def _calculate_pressure_and_temperature(self):
         """
@@ -369,9 +371,9 @@ class MS5611:
     def return_altitude(self, sea_level_kPa=101.325):
         """
         Calculate altitude based on pressure readings.
- """
+        """
 
-        if type(self.PRES) == float and self.PRES < 0:
+        if not type(self.PRES) == float or self.PRES < 0:
             return -1 #clean invalid data post-process
         
         altitude = 44330 * (1.0 - numpy.power(self.PRES / sea_level_kPa, 0.1903))

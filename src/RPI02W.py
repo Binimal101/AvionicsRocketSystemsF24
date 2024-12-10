@@ -19,10 +19,13 @@ from camera import start_camera
 #sleep timers
 data_collection_sleep_timer = 0.008 #TODO test
 
-altimeter_update_sleep_timer = 0.01 #tested
-sleep_timers = [data_collection_sleep_timer, altimeter_update_sleep_timer] # could be utilized to measure theoretical time deltas
+altimeter_update_sleep_timer = 0.1
+altimeter_read_update_timer = 0.05
 
-def fixQuaternionRotatation(quaternion: list) -> list:
+#global scope dynamic variables (inter-thread comms)
+pressure, temperature, altitude = 0, 0, 0
+
+def fixQuaternionRotation(quaternion: list) -> list:
     """
     fixes axes so that data is wrt rocket, not sensor
 
@@ -30,6 +33,8 @@ def fixQuaternionRotatation(quaternion: list) -> list:
     
     TODO test: quaternion should be [w,y,z,x] wrt rocket?
     """
+
+    w, x, y, z = range(4)
 
     return quaternion
 
@@ -46,7 +51,6 @@ class FlightDataLogger:
         self.transmit_process.start()
 
         self.flight_package = {
-            "imageLocation": None,  # Location of the image (if captured during flight)
             "gyro": {},  # Dictionary to hold gyroscope data
             "altimeter": {},  # Dictionary to hold altimeter data
             "time": -1,  # Time elapsed since the start of data collection
@@ -74,9 +78,7 @@ class FlightDataLogger:
             data_out_pin = 10
 
             self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
-
-            self.altimeter.update()
-            time.sleep(0.1) # allows sensor to breathe
+            #Altimeter is updated in the multithreaded scope as to avoid calling update twice 
 
         #works through the sleepiness of the configurations for each module to lessen start timer
         threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
@@ -114,26 +116,28 @@ class FlightDataLogger:
         self.gyro_last_temperature_reading = result  # Update the last temperature reading
         return result  # Return the processed temperature reading
 
+    def readAltimeterValues(self, sea_level_pressure: float):
+        global pressure, temperature, altitude
+        
+        self.altimeter.update()
+
+        while True:
+            
+            time.sleep(altimeter_read_update_timer) #tested to be reliable with altimeter values
+            
+            temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
+            pressure = self.altimeter.returnPressure()
+            altitude = self.altimeter.return_altitude(sea_level_pressure)
+
+            self.altimeter.update() #sends signal to device to ready new information
+
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
 
         #when thread spawned, self.altimeter will modify these for pickens in event-loop
         global pressure, temperature, altitude
-        pressure, temperature, altitude = 0, 0, 0
 
-        def readAltimeterValues():
-            while True:
-                global pressure, temperature, altitude
-                
-                temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
-                pressure = self.altimeter.returnPressure()
-                altitude = self.altimeter.return_altitude(sea_level_pressure)
-                
-                self.altimeter.update() #sends signal to device to ready new information
-
-                threading.Event().wait(0.02) #tested to be reliable with altimeter values
-
-        altimeter_read_thread = threading.Thread(target=readAltimeterValues)
+        altimeter_read_thread = threading.Thread(target=self.readAltimeterValues, args=(sea_level_pressure, ))
         altimeter_read_thread.start()
 
         #create new logfile in ../flightLogs/logfileNM
@@ -154,18 +158,14 @@ class FlightDataLogger:
 
         start_camera() #Popen's a subprocess for recording data, t=0 ~ self.start_time
 
-        # Open a log file to store flight data, using the current date for naming
-        with open(f"{file_path}", "a") as file:
-            while True:  # Main loop for continuous data collection
-
+        while True:  # Main loop for continuous data collection
+            with open(f"{file_path}", "a") as file: #open & close for each iteration to avoid corruption as best as possible
                 # Calculate the time elapsed since the start
                 self.flight_package["time"] = time.time() - self.start_time
 
                 # Collect sensor data and store in the flight package
-                """
-                euler and quaternion data are respective to cardinal directions assigned at calibration
-                """
-            
+                
+                #euler and quaternion data are respective to cardinal directions assigned at calibration
                 self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
                 self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
                 
@@ -173,7 +173,7 @@ class FlightDataLogger:
                     continue #NoneType encountered in readloop
                 
                 self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
-                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotatation(list(self.gyroscope.gyro))
+                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotation(list(self.gyroscope.gyro))
                 self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
                 self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
@@ -184,7 +184,7 @@ class FlightDataLogger:
                 self.flight_package["altimeter"]["altitude"] = altitude
    
                 # Write the flight package as JSON to the log file
-                json_data = json.dumps(self.flight_package) + ",\n"
+                json_data = json.dumps(self.flight_package) + ",\n\n"
                 
                 file.write(json_data)  # Append the JSON data to the log file
                             

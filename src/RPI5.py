@@ -7,8 +7,8 @@ from queue import Queue
 from interpolation import Interpolate
 from time import sleep
 
-from flask import Flask, render_template, request, url_for
-from flask_socketio import SocketIO, send, emit
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
 from recieve import RYLR998_Recieve
@@ -40,7 +40,7 @@ def get_radio(): #lazy load
     
     return radio
 
-def get_interpolation_medium():
+def get_interpolation_medium(): #lazy load
     global interpolator
     if interpolator is None:
         interpolator = Interpolate(FPS)
@@ -75,8 +75,9 @@ def checkPass(data):
     userpass = data.get("password", "")
     hashedInput = sha256(userpass.encode()).hexdigest()
     
-    print(userpass, hashedInput, hashedPassword)
-    
+    if not launchSequenceInitiated:
+        radio = get_radio()
+
     # Compare hashed input to hashed password
     if hashedInput == hashedPassword:
         launchSequenceInitiated = True
@@ -90,10 +91,11 @@ def checkPass(data):
     else:
         emit("validation_result", {"success": False})
 
-@socketio.on("request_data")
-def handle_request_data(data):
+@socketio.on("request_data", namespace="/visualize")
+def handle_request_data(_):
     """
-    Initiates data handling only once during execution, ensuring proper coordination between threads.
+    Initiates data handling only once during execution, ensuring proper coordination between threads
+    Emits quaternions 1 by 1 to EVERY client in the /visualize namespace
     """
     global launchSequenceInitiated, isBroadcasting, data_queue
 
@@ -106,7 +108,7 @@ def handle_request_data(data):
 
     isBroadcasting = True  # Mark broadcasting as active
 
-    data_queue = get_data_queue() #TODO implement circular queue
+    data_queue = get_data_queue()
 
     send_thread = threading.Thread(target=send_data)
     send_thread.start()
@@ -120,7 +122,7 @@ def read_data():
     global radio, launchSequenceInitiated, data_queue
 
     if data_queue is None:
-        data_queue = get_data_queue() #TODO implement circular queue
+        data_queue = get_data_queue()
 
     while launchSequenceInitiated:
         data = radio.recieve()  # this returns a serializable dictionary
@@ -148,9 +150,9 @@ def send_data():
             pprint(all_interpolated)
 
             if type(all_interpolated[0]) == float: #1d [], first iter
-                socketio.emit("data_send", all_interpolated)
+                socketio.emit("data_send", all_interpolated, namespace="/visualize") #send data to ALL connected clients on /visualize
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
-                sleep(0.01) #create PID loop for this
+                sleep(0.01) #works well, in future add PID loop
                 continue
 
             for interpolated_quaternion in all_interpolated:
@@ -158,13 +160,13 @@ def send_data():
                 if not isinstance(interpolated_quaternion, list): #if is np.array, make list
                     interpolated_quaternion = interpolated_quaternion.tolist()
 
-                socketio.emit("data_send", interpolated_quaternion) #[w, x, y, z]
+                socketio.emit("data_send", interpolated_quaternion, namespace="/visualize") #[w, x, y, z] #send data to ALL connected clients on /visualize
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
-                sleep(0.01) #create PID loop for this
+                sleep(0.01) #works well, in future add PID loop
+
         else:
             # Small sleep to avoid busy-waiting
-            threading.Event().wait(0.01)
-
+            sleep(0.01)
+            
 if __name__ == "__main__":
-    # Shared queue for communication between threads
     socketio.run(app, host="0.0.0.0", debug=True, allow_unsafe_werkzeug=True)

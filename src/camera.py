@@ -1,6 +1,7 @@
-import logging, subprocess, time
+import logging, subprocess, time, datetime, os
 import logging_config  
 
+milliseconds_per_segment = 100
 
 def start_camera():
     logging_config.setup_logging()
@@ -8,13 +9,16 @@ def start_camera():
     # Define the command as a list of arguments
     command = [
         "libcamera-vid",
-        "-o", "videoFeed.h264",
         "-n",
-        "--flush", "1",
         "-t", "0",
+        "--flush", "1",
+        "--segment", str(milliseconds_per_segment), "1",
+        "-o", f"../flightLogs/{datetime.date.today().strftime('%m-%d-%Y')}/vidsegment_%05d.h264",
     ]
 
     # Run the command
-    process = subprocess.Popen(command) #literal equivalent to execlp() in c
+    cameraProcess = subprocess.Popen(command) #literal equivalent to execlp() in c
+    syncProcess = subprocess.Popen(["./syncify.sh"])
 
-    logging.info(f"CAMERA Process started with PID: {process.pid} at {time.time()}")
+    logging.info(f"CAMERA Process started with PID: {cameraProcess.pid} at {time.time()}\n")
+    logging.info(f"SYNCIFY Process started with PID: {syncProcess.pid} at {time.time()}\n")
