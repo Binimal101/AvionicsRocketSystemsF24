@@ -19,8 +19,8 @@ from camera import start_camera
 #sleep timers
 data_collection_sleep_timer = 0.008 #TODO test
 
-altimeter_update_sleep_timer = 0.1 #tested
-altimeter_read_update_timer = 0.05 #tested
+altimeter_update_sleep_timer = 0.1
+altimeter_read_update_timer = 0.05
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
@@ -78,9 +78,7 @@ class FlightDataLogger:
             data_out_pin = 10
 
             self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
-
-            self.altimeter.update()
-            time.sleep(0.1) # allows sensor to breathe
+            #Altimeter is updated in the multithreaded scope as to avoid calling update twice 
 
         #works through the sleepiness of the configurations for each module to lessen start timer
         threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
@@ -118,26 +116,28 @@ class FlightDataLogger:
         self.gyro_last_temperature_reading = result  # Update the last temperature reading
         return result  # Return the processed temperature reading
 
+    def readAltimeterValues(self, sea_level_pressure: float):
+        global pressure, temperature, altitude
+        
+        self.altimeter.update()
+
+        while True:
+            
+            time.sleep(altimeter_read_update_timer) #tested to be reliable with altimeter values
+            
+            temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
+            pressure = self.altimeter.returnPressure()
+            altitude = self.altimeter.return_altitude(sea_level_pressure)
+
+            self.altimeter.update() #sends signal to device to ready new information
+
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
 
         #when thread spawned, self.altimeter will modify these for pickens in event-loop
         global pressure, temperature, altitude
 
-        def readAltimeterValues():
-            global pressure, temperature, altitude
-            
-            while True:
-                
-                time.sleep(altimeter_read_update_timer) #tested to be reliable with altimeter values
-                
-                temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
-                pressure = self.altimeter.returnPressure()
-                altitude = self.altimeter.return_altitude(sea_level_pressure)
-
-                self.altimeter.update() #sends signal to device to ready new information
-
-        altimeter_read_thread = threading.Thread(target=readAltimeterValues)
+        altimeter_read_thread = threading.Thread(target=self.readAltimeterValues, args=(sea_level_pressure, ))
         altimeter_read_thread.start()
 
         #create new logfile in ../flightLogs/logfileNM

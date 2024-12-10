@@ -91,10 +91,11 @@ def checkPass(data):
     else:
         emit("validation_result", {"success": False})
 
-@socketio.on("request_data")
-def handle_request_data(data):
+@socketio.on("request_data", namespace="/visualize")
+def handle_request_data(_):
     """
-    Initiates data handling only once during execution, ensuring proper coordination between threads.
+    Initiates data handling only once during execution, ensuring proper coordination between threads
+    Emits quaternions 1 by 1 to EVERY client in the /visualize namespace
     """
     global launchSequenceInitiated, isBroadcasting, data_queue
 
@@ -107,7 +108,7 @@ def handle_request_data(data):
 
     isBroadcasting = True  # Mark broadcasting as active
 
-    data_queue = get_data_queue() #TODO implement circular queue
+    data_queue = get_data_queue()
 
     send_thread = threading.Thread(target=send_data)
     send_thread.start()
@@ -121,7 +122,7 @@ def read_data():
     global radio, launchSequenceInitiated, data_queue
 
     if data_queue is None:
-        data_queue = get_data_queue() #TODO implement circular queue
+        data_queue = get_data_queue()
 
     while launchSequenceInitiated:
         data = radio.recieve()  # this returns a serializable dictionary
@@ -149,7 +150,7 @@ def send_data():
             pprint(all_interpolated)
 
             if type(all_interpolated[0]) == float: #1d [], first iter
-                socketio.emit("data_send", all_interpolated, broadcast=True) #send data to ALL connected clients, regardless of the page they are on
+                socketio.emit("data_send", all_interpolated, namespace="/visualize") #send data to ALL connected clients on /visualize
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
                 sleep(0.01) #works well, in future add PID loop
                 continue
@@ -159,7 +160,7 @@ def send_data():
                 if not isinstance(interpolated_quaternion, list): #if is np.array, make list
                     interpolated_quaternion = interpolated_quaternion.tolist()
 
-                socketio.emit("data_send", interpolated_quaternion, broadcast=True) #[w, x, y, z] #send data to ALL connected clients, regardless of the page they are on
+                socketio.emit("data_send", interpolated_quaternion, namespace="/visualize") #[w, x, y, z] #send data to ALL connected clients on /visualize
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
                 sleep(0.01) #works well, in future add PID loop
 
