@@ -1,4 +1,4 @@
-import logging, subprocess, time, datetime
+import logging, subprocess, time, datetime, os
 import logging_config  
 
 milliseconds_per_segment = 100
@@ -17,6 +17,8 @@ def start_camera():
     ]
 
     # Run the command
-    process = subprocess.Popen(command) #literal equivalent to execlp() in c
+    cameraProcess = subprocess.Popen(command) #literal equivalent to execlp() in c
+    syncProcess = subprocess.Popen(["./syncify.sh"])
 
-    logging.info(f"CAMERA Process started with PID: {process.pid} at {time.time()}")
+    logging.info(f"CAMERA Process started with PID: {cameraProcess.pid} at {time.time()}\n")
+    logging.info(f"SYNCIFY Process started with PID: {syncProcess.pid} at {time.time()}\n")
