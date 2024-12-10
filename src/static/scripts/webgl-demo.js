@@ -31,7 +31,7 @@ void main () {
 }`;
 
 const modelPath = "./static/model/rocket_edited.obj";
-const framerate = 10; // 1/10 of a second.
+const framerate = 40; // 1/10 of a second.
 
 class Quaternion {
   constructor(w, x, y, z) {
@@ -149,9 +149,6 @@ function Euler(roll, pitch, yaw) {
 
 main();
 
-//
-// start here
-//
 async function main() {
 
   const canvas = document.querySelector("#gl-canvas");
@@ -160,9 +157,8 @@ async function main() {
 
   // Only continue if WebGL is available and working
   if (gl === null) {
-    alert(
-      "Unable to initialize WebGL. Your browser or machine may not support it.",
-    );
+    alert("Unable to initialize WebGL. Your browser or machine may not support it.",);
+
     return;
   }
 
@@ -269,6 +265,7 @@ async function main() {
       2 * (angleX * angleZ - angleY * angleW),     2 * (angleY * angleZ + angleX * angleW),     1 - 2 * (angleX * angleX + angleY * angleY), 0,
       0,                                           0,                                           0,                                           1
     ]);
+    
     document.getElementById("wAngle").textContent = angleW;
     document.getElementById("xAngle").textContent = angleX;
     document.getElementById("yAngle").textContent = angleY;
