@@ -1,20 +1,3 @@
-'''
-    Python driver for [GY-63 MS5611 pressure sensor]
-	
-    Requires:
-	  - The [GPIO Library](https://code.google.com/p/raspberry-gpio-python/) (Already on most Raspberry Pi OS builds)
-	  - A [Raspberry Pi](http://www.raspberrypi.org/)
-	
-    Version:
-    1.0, 10-April-2018
-    Comments: 
-'''
-
-__license__ = 'GPL'
-__version__ = '1.0'
-__date__  = '10-April-2018'
-__status__ = 'Production'
-
 import RPi.GPIO as GPIO
 import time
 import numpy
@@ -44,24 +27,27 @@ class MS5611(object):
     __MS5611_C4                = 0xA8
     __MS5611_C5                = 0xAA
     __MS5611_C6                = 0xAC
-    #__MS5611_D1                = 0xAC
-    #__MS5611_D2                = 0xAE
+    __MS5611_D1                = 0xAC
+    __MS5611_D2                = 0xAE
         
-    def __init__(self, cs_pin, clock_pin, data_in_pin, data_out_pin, board = GPIO.BCM):
+    def __init__(self, cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer, board = GPIO.BCM):
 
         '''Initialize Soft (Bitbang) SPI bus
         Parameters:
         - cs_pin:    Chip Select (CS) / Slave Select (SS) pin (Any GPIO)  
         - clock_pin: Clock (SCLK / SCK) pin (Any GPIO)
         - data_in_pin:  Data input (SO / MOSI) pin (Any GPIO)
-	      - data_out_pin: Data output (MISO) pin (Any GPIO)
+	    - data_out_pin: Data output (MISO) pin (Any GPIO)
         - board:     (optional) pin numbering method as per RPi.GPIO library (GPIO.BCM (default) | GPIO.BOARD)
         '''        
+
+        self.board = board
         self.cs_pin = cs_pin
         self.clock_pin = clock_pin
         self.data_in_pin = data_in_pin
         self.data_out_pin = data_out_pin
-        self.board = board
+
+        self.update_sleep_timer = update_sleep_timer
                 
         # Default compensation parameters for MS5611
         self.C1 = 40127         # UINT16
@@ -167,7 +153,7 @@ class MS5611(object):
     def _read_adc(self):
         GPIO.output(self.cs_pin, GPIO.LOW)
         dump = self._spixfer(self.__MS5611_ADC_READ)    # send request to read from register
-        #time.sleep(0.1)
+        time.sleep(0.1)
         byteH = self._spixfer(0)    # send request to read from register
         byteM = self._spixfer(0)    # send request to read from register
         byteL = self._spixfer(0)    # send request to read from register
@@ -184,19 +170,17 @@ class MS5611(object):
                
     def _readPressure(self):
         self.D1 = self._read_adc()
-        #print 'D1 = {0:10d}'.format(self.D1)        
         
     def _readTemperature(self):
         self.D2 = self._read_adc()
-        #print 'D2 = {0:10d}'.format(self.D2)
         
     def update(self):
         self._refreshPressure()
-        time.sleep(0.01) # Waiting for pressure data ready
+        time.sleep(self.update_sleep_timer / 2)
         self._readPressure()
         
         self._refreshTemperature()
-        time.sleep(0.01) # Waiting for temperature data ready
+        time.sleep(self.update_sleep_timer / 2)
         self._readTemperature()
         
         self.calculatePressureAndTemperature()
@@ -209,14 +193,10 @@ class MS5611(object):
     
     def calculatePressureAndTemperature(self):
         dT = self.D2 - self.C5 * 2**8
-        #print 'dt = ', dT
         self.TEMP = 2000 + dT * self.C6 / 2**23
-        #print 'TEMP = ', self.TEMP
         
         OFF = self.C2 * 2**16 + (self.C4 * dT) / 2**7
-        #print 'OFF = ', OFF
         SENS = self.C1 * 2**15 + (self.C3 * dT) / 2**8
-        #print 'SENS = ', SENS
         
         if (self.TEMP >= 2000):
             T2 = 0
@@ -235,21 +215,15 @@ class MS5611(object):
         SENS = SENS - SENS2
         
         self.PRES = (self.D1 * SENS / 2**21 - OFF) / 2**15
-        #print 'PRES = ', self.PRES
         
         self.TEMP = self.TEMP / 100.0 # Temperature, C
         self.PRES = self.PRES / 1000.0 # Pressure, kPa
-        
-        #print 'Temperature = ' , self.TEMP
-        #print 'Pressure = ', self.PRES
          
-    def returnAltitude(self, seaLevel_kPa = 101.325):       
-        #pressure = self.PRES/10.0
-        #pressure = 101.325 # Standard sea level pressure in kPa
+    def returnAltitude(self, seaLevel_kPa = 101.325):
+        
+        if type(self.PRES) == float and self.PRES > 0:
+            print("pressure syncing, skipping valuation")
+            return 0
+        
         altitude = 44330 * (1.0 - numpy.power(self.PRES / seaLevel_kPa, 0.1903))
         return '{:.2f}'.format(altitude)
-    
-    @staticmethod
-    def create(cs_pin, clock_pin, data_in_pin, data_out_pin, board=GPIO.BCM):
-        """Creates and returns an instance of MS5611 with the given GPIO configuration."""
-        return MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, board)
