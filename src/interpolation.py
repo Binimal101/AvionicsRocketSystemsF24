@@ -44,7 +44,7 @@ class Interpolate:
 
         return (q1 * cos(theta) + q_perp * sin(theta))
 
-    def interpolate_quaternion(self, time_delta: float, quaternion) -> list: # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
+    def interpolate_quaternion(self, time_delta: float, quaternion: dict) -> list: # This is the method you would call for the interpolated data, returns a list of list with the original and interpolated data
         """
         Interpolates between quaternions in the input data using SLERP and includes the original quaternions.
         
@@ -52,6 +52,10 @@ class Interpolate:
         :return: List of quaternions including both original and interpolated quaternions.
         """
         
+        if len([x for x in quaternion.values() if type(x) != float or x < -1 or x > 1]) != 0:
+            print(f"Error interpolating bad data, returning last valid quaternion: {quaternion.items()}", flush=True)
+            return self.lastquaternion
+
         quaternion = [quaternion["rotation_w"], quaternion["rotation_x"], quaternion["rotation_y"], quaternion["rotation_z"]]
 
         if self.lastquaternion is None:

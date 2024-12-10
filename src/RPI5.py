@@ -40,7 +40,7 @@ def get_radio(): #lazy load
     
     return radio
 
-def get_interpolation_medium():
+def get_interpolation_medium(): #lazy load
     global interpolator
     if interpolator is None:
         interpolator = Interpolate(FPS)
@@ -148,9 +148,9 @@ def send_data():
             pprint(all_interpolated)
 
             if type(all_interpolated[0]) == float: #1d [], first iter
-                socketio.emit("data_send", all_interpolated)
+                socketio.emit("data_send", all_interpolated, broadcast=True) #send data to ALL connected clients, regardless of the page they are on
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
-                sleep(0.01) #create PID loop for this
+                sleep(0.01) #works well, in future add PID loop
                 continue
 
             for interpolated_quaternion in all_interpolated:
@@ -158,13 +158,13 @@ def send_data():
                 if not isinstance(interpolated_quaternion, list): #if is np.array, make list
                     interpolated_quaternion = interpolated_quaternion.tolist()
 
-                socketio.emit("data_send", interpolated_quaternion) #[w, x, y, z]
+                socketio.emit("data_send", interpolated_quaternion, broadcast=True) #[w, x, y, z] #send data to ALL connected clients, regardless of the page they are on
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
-                sleep(0.01) #create PID loop for this
+                sleep(0.01) #works well, in future add PID loop
+
         else:
             # Small sleep to avoid busy-waiting
-            threading.Event().wait(0.01)
-
+            sleep(0.01)
+            
 if __name__ == "__main__":
-    # Shared queue for communication between threads
     socketio.run(app, host="0.0.0.0", debug=True, allow_unsafe_werkzeug=True)
