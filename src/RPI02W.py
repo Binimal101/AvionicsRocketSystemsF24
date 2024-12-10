@@ -19,8 +19,8 @@ from camera import start_camera
 #sleep timers
 data_collection_sleep_timer = 0.008 #TODO test
 
-altimeter_update_sleep_timer = 0.01 #tested
-altimeter_read_update_timer = 0.1 #tested
+altimeter_update_sleep_timer = 0.1 #tested
+altimeter_read_update_timer = 0.05 #tested
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
@@ -51,7 +51,6 @@ class FlightDataLogger:
         self.transmit_process.start()
 
         self.flight_package = {
-            "imageLocation": None,  # Location of the image (if captured during flight)
             "gyro": {},  # Dictionary to hold gyroscope data
             "altimeter": {},  # Dictionary to hold altimeter data
             "time": -1,  # Time elapsed since the start of data collection
@@ -126,16 +125,17 @@ class FlightDataLogger:
         global pressure, temperature, altitude
 
         def readAltimeterValues():
+            global pressure, temperature, altitude
+            
             while True:
-                global pressure, temperature, altitude
-                
-                self.altimeter.update() #sends signal to device to ready new information
                 
                 time.sleep(altimeter_read_update_timer) #tested to be reliable with altimeter values
                 
                 temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                 pressure = self.altimeter.returnPressure()
                 altitude = self.altimeter.return_altitude(sea_level_pressure)
+
+                self.altimeter.update() #sends signal to device to ready new information
 
         altimeter_read_thread = threading.Thread(target=readAltimeterValues)
         altimeter_read_thread.start()
@@ -164,10 +164,8 @@ class FlightDataLogger:
                 self.flight_package["time"] = time.time() - self.start_time
 
                 # Collect sensor data and store in the flight package
-                """
-                euler and quaternion data are respective to cardinal directions assigned at calibration
-                """
-            
+                
+                #euler and quaternion data are respective to cardinal directions assigned at calibration
                 self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
                 self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
                 
@@ -186,7 +184,7 @@ class FlightDataLogger:
                 self.flight_package["altimeter"]["altitude"] = altitude
    
                 # Write the flight package as JSON to the log file
-                json_data = json.dumps(self.flight_package) + ",\n"
+                json_data = json.dumps(self.flight_package) + ",\n\n"
                 
                 file.write(json_data)  # Append the JSON data to the log file
                             

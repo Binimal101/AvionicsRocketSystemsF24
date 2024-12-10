@@ -221,7 +221,7 @@ class MS5611(object):
          
     def returnAltitude(self, seaLevel_kPa = 101.325):
         
-        if type(self.PRES) == float and self.PRES > 0:
+        if not type(self.PRES) == float or self.PRES < 0:
             print("pressure syncing, skipping valuation")
             return 0
         

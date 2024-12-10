@@ -75,8 +75,9 @@ def checkPass(data):
     userpass = data.get("password", "")
     hashedInput = sha256(userpass.encode()).hexdigest()
     
-    print(userpass, hashedInput, hashedPassword)
-    
+    if not launchSequenceInitiated:
+        radio = get_radio()
+
     # Compare hashed input to hashed password
     if hashedInput == hashedPassword:
         launchSequenceInitiated = True

@@ -97,7 +97,7 @@ class FlightDataLogger:
         transmit_cycles = 5 # used for modulo
 
         # Configure GPIO pins
-        cs_pin = 24
+        cs_pin = 22
         clock_pin = 11
         data_in_pin = 9
         data_out_pin = 10
