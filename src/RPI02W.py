@@ -63,9 +63,9 @@ class FlightDataLogger:
         
     def setup_hardware(self) -> list:
         
-        #****RADIO****
-        def init_radio():
-            self.radio = RYLR998_Transmit()
+        # #****RADIO****
+        # def init_radio():
+        #     self.radio = RYLR998_Transmit()
 
         #****GYROSCOPE****
         def init_gyro():
@@ -76,7 +76,7 @@ class FlightDataLogger:
             self.gyro_last_temperature_reading = 0xFFFF
 
         #works through the sleepiness of the configurations for each module to lessen start timer
-        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro)]
+        threads = [threading.Thread(target=x) for x in (init_gyro)]
         [x.start() for x in threads]
         
         return threads #joined in outer scope
@@ -131,8 +131,9 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
-        start_camera() #Popen's a subprocess for recording data, t=0 ~ self.start_time
+        #start_camera() #Popen's a subprocess for recording data, t=0 ~ self.start_time
         self.altimeter.update()
+        time.sleep(0.25)
 
         while True:  # Main loop for continuous data collection
             with open(f"{file_path}", "a") as file: #open & close for each iteration to avoid corruption as best as possible
@@ -167,11 +168,11 @@ class FlightDataLogger:
 
                 file.write(json_data)  # Append the JSON data to the log file
                             
-                self.transmit(time_delta = (time.time()) - start_payload_time, quaternion = self.flight_package["gyro"]["quaternion"])
+                # self.transmit(time_delta = (time.time()) - start_payload_time, quaternion = self.flight_package["gyro"]["quaternion"])
 
                 time.sleep(0.25)
                 
-                start_payload_time = time.time()
+                # start_payload_time = time.time()
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
