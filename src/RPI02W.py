@@ -56,8 +56,15 @@ class FlightDataLogger:
             "time": -1,  # Time elapsed since the start of data collection
         }
 
+        cs_pin = 22
+        clock_pin = 11
+        data_in_pin = 9
+        data_out_pin = 10
+
+        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
+
         self.measurement_iteration = 0
-        self.update_thread = threading.Thread(lambda: 1) #arbitrary, joined in loop-scope then intialized 
+        self.update_thread = threading.Thread(target=lambda: 1) #arbitrary, joined in loop-scope then intialized 
         self.update_thread.start()
         
     def setup_hardware(self) -> list:
@@ -73,18 +80,9 @@ class FlightDataLogger:
             
             # This variable holds the last temperature reading to prevent erroneous readings
             self.gyro_last_temperature_reading = 0xFFFF
-        
-        #****ALTIMETER****
-        def init_altimeter():
-            cs_pin = 22
-            clock_pin = 11
-            data_in_pin = 9
-            data_out_pin = 10
-
-            self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
 
         #works through the sleepiness of the configurations for each module to lessen start timer
-        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
+        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro)]
         [x.start() for x in threads]
         
         return threads #joined in outer scope
@@ -122,12 +120,6 @@ class FlightDataLogger:
 
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
-
-        #when thread spawned, self.altimeter will modify these for pickens in event-loop
-        global pressure, temperature, altitude
-
-        altimeter_read_thread = threading.Thread(target=self.readAltimeterValues, args=(sea_level_pressure, ))
-        altimeter_read_thread.start()
 
         #create new logfile in ../flightLogs/logfileNM
         current_file_dir = os.path.dirname(__file__)
@@ -170,14 +162,14 @@ class FlightDataLogger:
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
                 
                 #updates every n cycles as to simulate sleeping and running to fit the refresh rate of device    
-                if self.measurement_iteration % data_collection_sleep_timer/altimeter_update_sleep_timer == 0:
+                if self.measurement_iteration % int(altimeter_update_sleep_timer/data_collection_sleep_timer) == 0:
                     self.update_thread.join() #will still block main thread, but by like 10% less than originally
 
                     self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
                     self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
                     self.flight_package["altimeter"]["altitude"] = self.altimeter.return_altitude(sea_level_pressure)
                     
-                    self.update_thread = threading.Thread(self.altimeter.update) #will alternatively block main thread reducing throughput but a large amount 
+                    self.update_thread = threading.Thread(target=self.altimeter.update) #will alternatively block main thread reducing throughput but a large amount 
                     self.update_thread.start()
 
                 # Write the flight package as JSON to the log file
@@ -190,6 +182,9 @@ class FlightDataLogger:
                 time.sleep(data_collection_sleep_timer)
                 
                 start_payload_time = time.time()
+
+                self.measurement_iteration += 1
+
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
