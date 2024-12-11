@@ -12,6 +12,7 @@ Module components:
 - Sensor initialization and calibration
 - Logging of data and errors during operation
 """
+
 import time
 import logging
 import numpy
@@ -114,9 +115,6 @@ class MS5611:
             print("reading coeffs")
             self._read_coefficients()
             time.sleep(1.0)
-
-            # Update sensor data
-            self.update()
 
         except Exception as e:
             logging.error("Error initializing MS5611 sensor: %s", e)
