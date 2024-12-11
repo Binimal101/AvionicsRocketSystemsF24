@@ -103,7 +103,7 @@ class FlightDataLogger:
         data_out_pin = 10
 
         # Use the create method to instantiate MS5611
-        ms = MS5611.create(cs_pin, clock_pin, data_in_pin, data_out_pin)
+        ms = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, 0.1)
         ms.update()
         time.sleep(0.1) # allows sensor to breathe
 
