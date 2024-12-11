@@ -110,6 +110,7 @@ class RYLR998:
         """
         Send an AT command and return the response.
         """
+        
         full_command = f'{command}\r\n'
         self.ser.write(full_command.encode())
         time.sleep(0.05)
@@ -117,7 +118,12 @@ class RYLR998:
 
         while True:
             if self.ser.in_waiting:
-                response += self.ser.read(self.ser.in_waiting).decode()
+                try:
+                    response += self.ser.read(self.ser.in_waiting).decode()
+                except UnicodeDecodeError: # race condition, skip over as it will be handled in correct scope if ignored
+                    print(f"Tried to decode: {response}, doesn't follow UTF-8 Codec in scope REYAX:send_command, continuing", flush=True)
+                    continue
+
                 if 'OK' in response or 'ERROR' in response:
                     break
             else:

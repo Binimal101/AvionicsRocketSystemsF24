@@ -31,7 +31,7 @@ void main () {
 }`;
 
 const modelPath = "./static/model/rocket_edited.obj";
-const framerate = 10; // 1/10 of a second.
+const framerate = 40; // 1/10 of a second.
 
 class Quaternion {
   constructor(w, x, y, z) {
@@ -39,6 +39,16 @@ class Quaternion {
     this.x = x;
     this.y = y;
     this.z = z;
+  }
+
+  NormalizeQuaternion() {
+    const norm = Math.sqrt(this.w * this.w + this.x * this.x + this.y * this.y + this.z * this.z);
+    // Normalize quaternion
+    if(norm == 0) return;
+    this.w /= norm;
+    this.x /= norm;
+    this.y /= norm;
+    this.z /= norm;
   }
 
   //Quaternion to Euler from Wikipedia (does NOT account for gimbal lock)
@@ -139,9 +149,6 @@ function Euler(roll, pitch, yaw) {
 
 main();
 
-//
-// start here
-//
 async function main() {
 
   const canvas = document.querySelector("#gl-canvas");
@@ -150,9 +157,8 @@ async function main() {
 
   // Only continue if WebGL is available and working
   if (gl === null) {
-    alert(
-      "Unable to initialize WebGL. Your browser or machine may not support it.",
-    );
+    alert("Unable to initialize WebGL. Your browser or machine may not support it.",);
+
     return;
   }
 
@@ -243,22 +249,27 @@ async function main() {
     let tempZ = Number(document.getElementById("input_data").getAttribute("z_in"));
     
     let tempquat = new Quaternion(tempW, tempX, tempY, tempZ);
-    let tempeul = tempquat.toEulerNormalized();
+    tempquat.NormalizeQuaternion();
+    //let tempeul = tempquat.toEulerNormalized();
     
-    let angleX = tempeul.pitch;
-    let angleY = tempeul.roll;
-    let angleZ = tempeul.yaw;
+    let angleW = tempquat.w;
+    let angleX = tempquat.x;
+    let angleY = tempquat.y;
+    let angleZ = tempquat.z;
 
-    console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
-
-    let u_world = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);//make empty rotation matrix
-    document.getElementById("xAngle").textContent = radToDeg(angleX) + " Degrees";
-    document.getElementById("yAngle").textContent = radToDeg(angleY) + " Degrees";
-    document.getElementById("zAngle").textContent = radToDeg(angleZ) + " Degrees";
+    //console.log("angle x: ", angleX, "\tangle y: ", angleY, "\tangle z: ", angleZ);
+    //apply rotation
+    let u_world = new Float32Array([
+      1 - 2 * (angleY * angleY + angleZ * angleZ), 2 * (angleX * angleY - angleZ * angleW),     2 * (angleX * angleZ + angleY * angleW),     0,
+      2 * (angleX * angleY + angleZ * angleW),     1 - 2 * (angleX * angleX + angleZ * angleZ), 2 * (angleY * angleZ - angleX * angleW),     0,
+      2 * (angleX * angleZ - angleY * angleW),     2 * (angleY * angleZ + angleX * angleW),     1 - 2 * (angleX * angleX + angleY * angleY), 0,
+      0,                                           0,                                           0,                                           1
+    ]);
     
-    u_world = m4.xRotate(u_world, angleX);
-    u_world = m4.yRotate(u_world, angleY);
-    u_world = m4.zRotate(u_world, angleZ);
+    document.getElementById("wAngle").textContent = angleW;
+    document.getElementById("xAngle").textContent = angleX;
+    document.getElementById("yAngle").textContent = angleY;
+    document.getElementById("zAngle").textContent = angleZ;
 
     for (const {bufferInfo, material} of parts) {
       // calls gl.bindBuffer, gl.enableVertexAttribArray, gl.vertexAttribPointer

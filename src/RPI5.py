@@ -151,7 +151,9 @@ def send_data():
 
             if type(all_interpolated[0]) == float: #1d [], first iter
                 socketio.emit("data_send", all_interpolated, namespace="/visualize") #send data to ALL connected clients on /visualize
+                
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
+                
                 sleep(0.01) #works well, in future add PID loop
                 continue
 
