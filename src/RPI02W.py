@@ -23,9 +23,6 @@ data_collection_sleep_timer = 0.008 #TODO test
 altimeter_update_sleep_timer = 0.1
 altimeter_read_update_timer = 0.05
 
-#global scope dynamic variables (inter-thread comms)
-pressure, temperature, altitude = 0, 0, 0
-
 def fixQuaternionRotation(quaternion: list) -> list:
     """
     fixes axes so that data is wrt rocket, not sensor
@@ -43,6 +40,13 @@ class FlightDataLogger:
     def __init__(self):
         print("Setting up measurement devices")
 
+        cs_pin = 22
+        clock_pin = 11
+        data_in_pin = 9
+        data_out_pin = 10
+
+        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
+        
         # SETUP WITH THREADS THEN WAIT FOR EVERYTHING
         thread_queue = self.setup_hardware() #avoids b2b sleep hassle for setting up configs
         [x.join() for x in thread_queue]
@@ -70,19 +74,9 @@ class FlightDataLogger:
             
             # This variable holds the last temperature reading to prevent erroneous readings
             self.gyro_last_temperature_reading = 0xFFFF
-        
-        #****ALTIMETER****
-        def init_altimeter():
-            cs_pin = 22
-            clock_pin = 11
-            data_in_pin = 9
-            data_out_pin = 10
-
-            self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
-            #Altimeter is updated in the multithreaded scope as to avoid calling update twice 
 
         #works through the sleepiness of the configurations for each module to lessen start timer
-        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
+        threads = [threading.Thread(target=x) for x in (init_radio, init_gyro)]
         [x.start() for x in threads]
         
         return threads #joined in outer scope
@@ -120,12 +114,6 @@ class FlightDataLogger:
 
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
-
-        #when thread spawned, self.altimeter will modify these for pickens in event-loop
-        global pressure, temperature, altitude
-
-        altimeter_read_thread = threading.Thread(target=self.readAltimeterValues, args=(sea_level_pressure, ))
-        altimeter_read_thread.start()
 
         #create new logfile in ../flightLogs/logfileNM
         current_file_dir = os.path.dirname(__file__)
@@ -169,13 +157,13 @@ class FlightDataLogger:
             
                 self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
                 self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude(101.7)
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.return_altitude(sea_level_pressure)
                 
                 self.altimeter.update()
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ",\n\n"
-                pprint(json_data["altimeter"])
+                print(self.flight_package["altimeter"], flush=True)
 
                 file.write(json_data)  # Append the JSON data to the log file
                             
