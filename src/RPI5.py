@@ -95,7 +95,7 @@ def checkPass(data):
 def handle_request_data(_):
     """
     Initiates data handling only once during execution, ensuring proper coordination between threads
-    Emits quaternions 1 by 1 to EVERY client in the /visualize namespace
+    Emits quaternions 1 by 1 to EVERY client in the root namespace
     """
     global launchSequenceInitiated, isBroadcasting, data_queue
 
@@ -150,7 +150,7 @@ def send_data():
             pprint(all_interpolated)
 
             if type(all_interpolated[0]) == float: #1d [], first iter
-                socketio.emit("data_send", all_interpolated, namespace="/visualize") #send data to ALL connected clients on /visualize
+                socketio.emit("data_send", all_interpolated) #send data to ALL connected clients
                 
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
                 
@@ -162,7 +162,7 @@ def send_data():
                 if not isinstance(interpolated_quaternion, list): #if is np.array, make list
                     interpolated_quaternion = interpolated_quaternion.tolist()
 
-                socketio.emit("data_send", interpolated_quaternion, namespace="/visualize") #[w, x, y, z] #send data to ALL connected clients on /visualize
+                socketio.emit("data_send", interpolated_quaternion) #[w, x, y, z] #send data to ALL connected clients
                 print(f"Sent! Left in queue {data_queue.qsize()}", flush=True)
                 sleep(0.01) #works well, in future add PID loop
 

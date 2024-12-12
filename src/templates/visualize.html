@@ -37,7 +37,7 @@
     <body id="information">
         <script>
 
-            const socket = io("/visualize"); //Create namespace for clients
+            const socket = io(); //Create root namespace
 
             // WILL BE SENT OVER AT X-FPS, IMMEDIATELY UPDATE VISUALIZATION IN JS-SCOPE
             socket.on("data_send", (response) => {
