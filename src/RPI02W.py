@@ -158,6 +158,9 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
+        with open(dir_path + "variableLog.txt", "w") as f: #writes quaternion_0
+            f.write(f"Start quaternions: {list(self.gyroscope.quaternion)}")
+
         open(file_path, "w").close() # empties file for new logging on date
         
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time

@@ -47,9 +47,6 @@
                     let z = response[3];
                     
                     update(w,x,y,z);
-                    
-                    console.log("RCVD DATA: ");
-                    console.log(response);
             });
     
         </script>
@@ -63,10 +60,29 @@
         <canvas id="gl-canvas">
             
         </canvas>
+        
         <!-- THESE INVISIBLE ELEMENTS ARE NOT VERY IMPORTANT..? -->
         <input type="hidden" id="w_in">
         <input type="hidden" id="x_in">
         <input type="hidden" id="y_in">
         <input type="hidden" id="z_in">
+
+        <!-- New button at the bottom of the screen -->
+        <button id="logDataButton" style="position: fixed; bottom: 10px; right: 10px;">
+            Log Data
+        </button>
+
+        <script>
+            document.getElementById('logDataButton').addEventListener('click', () => {
+                const inputData = document.getElementById('input_data');
+                const w_in = inputData.getAttribute('w_in');
+                const x_in = inputData.getAttribute('x_in');
+                const y_in = inputData.getAttribute('y_in');
+                const z_in = inputData.getAttribute('z_in');
+
+                console.log("w_in:", w_in, "x_in:", x_in, "y_in:", y_in, "z_in:", z_in);
+            });
+        </script>
+    
     </body>
 </html>
