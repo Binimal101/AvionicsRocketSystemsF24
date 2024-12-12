@@ -93,13 +93,15 @@ class FlightDataLogger:
             payload = qbuff.get() #will wait the process until an item is available to get
 
             time_delta, quaternion = payload
+            
+            print(f"TRANSMITTING PAYLOAD FROM MAIN SCOPE: {time_delta}, {quaternion}", flush=True)
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
         try:
             self.transmit_queue.put((time_delta, quaternion))
-        except:
-            pass
+        except Exception as e:
+            print(f"ran into error trying to transmit: {e}", flush=True)
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
@@ -131,7 +133,6 @@ class FlightDataLogger:
                 pressure = self.altimeter.returnPressure()
                 altitude = self.altimeter.return_altitude(sea_level_pressure)
 
-
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
 
@@ -161,42 +162,40 @@ class FlightDataLogger:
 
         while True:  # Main loop for continuous data collection
             with open(f"{file_path}", "a") as file: #open & close for each iteration to avoid corruption as best as possible
+                    
+                # Calculate the time elapsed since the start
+                self.flight_package["time"] = time.time() - self.start_time
+
+                # Collect sensor data and store in the flight package
                 
-                with self.sensor_lock: #one thread at a time
-                    
-                    # Calculate the time elapsed since the start
-                    self.flight_package["time"] = time.time() - self.start_time
+                #euler and quaternion data are respective to cardinal directions assigned at calibration
+                self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
+                self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
+                
+                if len([x for x in [*self.flight_package["gyro"]["quaternion"], *self.flight_package["gyro"]["euler"]] if x is None]):
+                    continue #NoneType encountered in readloop
+                
+                self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
+                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotation(list(self.gyroscope.gyro))
+                self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
+                self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
+                self.flight_package["gyro"]["temperature"] = self.get_temperature()
+                
+                #updates in seperate thread as refresh rate is only 20hz, just count same values until ready to refresh
+                self.flight_package["altimeter"]["temperature"] = temperature
+                self.flight_package["altimeter"]["pressure"] = pressure
+                self.flight_package["altimeter"]["altitude"] = altitude
 
-                    # Collect sensor data and store in the flight package
-                    
-                    #euler and quaternion data are respective to cardinal directions assigned at calibration
-                    self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
-                    self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
-                    
-                    if len([x for x in [*self.flight_package["gyro"]["quaternion"], *self.flight_package["gyro"]["euler"]] if x is None]):
-                        continue #NoneType encountered in readloop
-                    
-                    self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
-                    self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotation(list(self.gyroscope.gyro))
-                    self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
-                    self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
-                    self.flight_package["gyro"]["temperature"] = self.get_temperature()
-                    
-                    #updates in seperate thread as refresh rate is only 20hz, just count same values until ready to refresh
-                    self.flight_package["altimeter"]["temperature"] = temperature
-                    self.flight_package["altimeter"]["pressure"] = pressure
-                    self.flight_package["altimeter"]["altitude"] = altitude
-    
-                    # Write the flight package as JSON to the log file
-                    json_data = json.dumps(self.flight_package) + ",\n\n"
-                    
-                    file.write(json_data)  # Append the JSON data to the log file
-                                
-                    self.transmit(time_delta = (time.time()) - start_payload_time, quaternion = self.flight_package["gyro"]["quaternion"])
+                # Write the flight package as JSON to the log file
+                json_data = json.dumps(self.flight_package) + ",\n\n"
+                
+                file.write(json_data)  # Append the JSON data to the log file
+                            
+                self.transmit(time_delta = (time.time()) - start_payload_time, quaternion = self.flight_package["gyro"]["quaternion"])
 
-                    time.sleep(data_collection_sleep_timer)
-                    
-                    start_payload_time = time.time()
+                time.sleep(data_collection_sleep_timer)
+                
+                start_payload_time = time.time()
 
 if __name__ == "__main__":
     logger = FlightDataLogger()  # Create an instance of FlightDataLogger
