@@ -158,10 +158,12 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
-        start_camera() #Popen's a subprocess for recording data, t=0 ~ self.start_time
+        open(file_path, "w").close() # empties file for new logging on date
+        
+        start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
 
         while True:  # Main loop for continuous data collection
-            with open(f"{file_path}", "a") as file: #open & close for each iteration to avoid corruption as best as possible
+            with open(file_path, "a") as file: #open & close for each iteration to avoid corruption as best as possible
                     
                 # Calculate the time elapsed since the start
                 self.flight_package["time"] = time.time() - self.start_time

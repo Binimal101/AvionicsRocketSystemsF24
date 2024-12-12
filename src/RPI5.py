@@ -91,7 +91,7 @@ def checkPass(data):
     else:
         emit("validation_result", {"success": False})
 
-@socketio.on("request_data", namespace="/visualize")
+@socketio.on("request_data")
 def handle_request_data(_):
     """
     Initiates data handling only once during execution, ensuring proper coordination between threads
