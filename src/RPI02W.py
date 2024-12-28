@@ -71,6 +71,14 @@ class FlightDataLogger:
             
             # This variable holds the last temperature reading to prevent erroneous readings
             self.gyro_last_temperature_reading = 0xFFFF
+
+            # (x:0x01, y:0x02, z:0x03, x_sign, y-sign, z_sign)
+            """
+            We assume x is fine l-r (with correct signage)
+            We found that z & y were incorrect with mapping, undeterminate of signage TODO test
+            """
+            self.gyroscope.axis_remap(0x01, 0x03, 0x02, 1, 1, 1)
+            time.sleep(0.3)
         
         #****ALTIMETER****
         def init_altimeter():
