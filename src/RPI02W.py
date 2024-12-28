@@ -16,6 +16,10 @@ from altimeter import MS5611
 from transmit import RYLR998_Transmit
 from camera import start_camera
 
+import logging, logging_config
+
+logging_config.setup_logging()
+
 #sleep timers
 data_collection_sleep_timer = 0.008 #TODO test
 
@@ -24,19 +28,6 @@ altimeter_read_update_timer = 0.05
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
-
-def fixQuaternionRotation(quaternion: list) -> list:
-    """
-    fixes axes so that data is wrt rocket, not sensor
-
-    :param quaternion: [w,x,y,z] wrt sensor, through testing, 
-    
-    TODO test: quaternion should be [w,y,z,x] wrt rocket?
-    """
-
-    w, x, y, z = range(4)
-
-    return quaternion
 
 class FlightDataLogger:
     def __init__(self):
@@ -101,8 +92,7 @@ class FlightDataLogger:
             payload = qbuff.get() #will wait the process until an item is available to get
 
             time_delta, quaternion = payload
-            
-            print(f"TRANSMITTING PAYLOAD FROM MAIN SCOPE: {time_delta}, {quaternion}", flush=True)
+
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
@@ -110,6 +100,7 @@ class FlightDataLogger:
             self.transmit_queue.put((time_delta, quaternion))
         except Exception as e:
             print(f"ran into error trying to transmit: {e}", flush=True)
+            self.lo
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
@@ -166,9 +157,6 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
-        with open(dir_path + "variableLog.txt", "w") as f: #writes quaternion_0
-            f.write(f"Start quaternions: {list(self.gyroscope.quaternion)}")
-
         open(file_path, "w").close() # empties file for new logging on date
         
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
@@ -189,7 +177,7 @@ class FlightDataLogger:
                     continue #NoneType encountered in readloop
                 
                 self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
-                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotation(list(self.gyroscope.gyro))
+                self.flight_package["gyro"]["radialVelocity"] = list(self.gyroscope.gyro)
                 self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
                 self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
@@ -220,4 +208,8 @@ if __name__ == "__main__":
         print(e, "ERR, defaulting to 101.7 for sea_level_pressure")
         sea_level_pressure = 101.7
     
-    logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
+    try:
+        logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
+    except Exception as e: #TODO redundant restart
+        print(f"Logging Failed, Error: {e}\nexiting...")
+        logging.error(f"Logging Failed, Error: {e}\nexiting...")

@@ -111,7 +111,6 @@ class MS5611:
             time.sleep(0.03)
 
             # Read calibration coefficients
-            logging.info("Reading calibration coefficients.")
             print("reading coeffs")
             self._read_coefficients()
             time.sleep(1.0)
@@ -243,7 +242,6 @@ class MS5611:
             OSR (int): Oversampling rate (default: 4096).
         """
         try:
-            logging.info("Refreshing pressure with OSR = %d", OSR)
             self._send_command(OSR)
         except Exception as e:
             logging.error("Error refreshing pressure with OSR %s: %s", OSR, e)
@@ -257,7 +255,6 @@ class MS5611:
             OSR (int): Oversampling rate (default: 4096).
         """
         try:
-            logging.info("Refreshing temperature with OSR = %s", OSR)
             self._send_command(OSR)
         except Exception as e:
             logging.error("Error refreshing temperature with OSR %s: %s", OSR, e)
@@ -268,7 +265,6 @@ class MS5611:
         Read the pressure data from the sensor ADC.
         """
         try:
-            logging.info("Reading pressure data from ADC.")
             self.D1 = self._read_adc()
         except Exception as e:
             logging.error("Error reading pressure data: %s", e)
@@ -279,7 +275,6 @@ class MS5611:
         Read the temperature data from the sensor ADC.
         """
         try:
-            logging.info("Reading temperature data from ADC.")
             self.D2 = self._read_adc()
         except Exception as e:
             logging.error("Error reading temperature data: %s", e)
@@ -312,7 +307,6 @@ class MS5611:
             str: Formatted pressure value in kPa.
         """
         try:
-            logging.info("Returning pressure value: %.3f kPa", self.PRES)
             return f'{self.PRES:.3f}'
         except Exception as e:
             logging.error("Error returning pressure value: %s", e)
@@ -326,7 +320,6 @@ class MS5611:
             str: Formatted temperature value in degrees Celsius.
         """
         try:
-            logging.info("Returning temperature value: %.2f °C", self.TEMP)
             return f'{self.TEMP:.2f}'
         except Exception as e:
             logging.error("Error returning temperature value: %s", e)
