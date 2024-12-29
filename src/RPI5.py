@@ -144,10 +144,8 @@ def send_data():
         if not data_queue.empty():
             data = data_queue.get()
 
-            all_interpolated = interpolator.interpolate_quaternion(data[0], data[1]) #[0]time_delta, [1]only one quaternion type==dict
-
-            print("interpolated DP's:", flush=True)
-            pprint(all_interpolated)
+            #[0]time_delta, [1]only one quaternion type==dict
+            all_interpolated = interpolator.interpolate_quaternion(data[0], data[1]) 
 
             if type(all_interpolated[0]) == float: #1d [], first iter
                 socketio.emit("data_send", all_interpolated) #send data to ALL connected clients

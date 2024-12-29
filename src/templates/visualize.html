@@ -38,6 +38,8 @@
         <script>
 
             const socket = io(); //Create root namespace
+            var ct = 0;
+            var quaternions = [];
 
             // WILL BE SENT OVER AT X-FPS, IMMEDIATELY UPDATE VISUALIZATION IN JS-SCOPE
             socket.on("data_send", (response) => {
@@ -46,7 +48,10 @@
                     let y = response[2];
                     let z = response[3];
                     
-                    update(w,x,y,z);
+                    update(w, x, y, z);
+
+                    quaternions[ct % 100] = [w, x, y, z];
+                    ct++;
             });
     
         </script>
@@ -75,12 +80,13 @@
         <script>
             document.getElementById('logDataButton').addEventListener('click', () => {
                 const inputData = document.getElementById('input_data');
-                const w_in = inputData.getAttribute('w_in');
-                const x_in = inputData.getAttribute('x_in');
-                const y_in = inputData.getAttribute('y_in');
-                const z_in = inputData.getAttribute('z_in');
+                
 
-                console.log("w_in:", w_in, "x_in:", x_in, "y_in:", y_in, "z_in:", z_in);
+                console.log("PRINTING LAST 100 SAMPLES:");
+                for(let i = 0; i < 100; i++) {
+                    console.log("w_in:", quaternions[i][0], "x_in:", quaternions[i][1], "y_in:", quaternions[i][2], "z_in:", quaternions[i][3]);
+                }
+
             });
         </script>
     
