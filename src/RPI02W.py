@@ -68,8 +68,10 @@ class FlightDataLogger:
             We assume x is fine l-r (with correct signage)
             We found that z & y were incorrect with mapping, undeterminate of signage TODO test
             """
-            self.gyroscope.axis_remap(0x00, 0x02, 0x01, 0, 0, 0)
-            time.sleep(0.05)
+            remap = (0x00, 0x02, 0x01, 0, 0, 0)
+            
+            self.gyroscope.axis_remap(remap)
+            time.sleep(0.05) #needs about 300-500ms to kick-in
         
         #****ALTIMETER****
         def init_altimeter():
@@ -82,7 +84,7 @@ class FlightDataLogger:
             #Altimeter is updated in the multithreaded scope as to avoid calling update twice 
 
         #works through the sleepiness of the configurations for each module to lessen start timer
-        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
+        threads = [threading.Thread(target = x) for x in (init_altimeter, init_radio, init_gyro)]
         [x.start() for x in threads]
         
         return threads #joined in outer scope
@@ -100,7 +102,7 @@ class FlightDataLogger:
             self.transmit_queue.put((time_delta, quaternion))
         except Exception as e:
             print(f"ran into error trying to transmit: {e}", flush=True)
-            self.lo
+            logging.error(f"ran into error trying to transmit: {e}")
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()

@@ -39,7 +39,7 @@
 
             const socket = io(); //Create root namespace
             var ct = 0;
-            var quaternions = [];
+            var quaternions = new Array(100).fill(Array(4).fill(-1)); // pre-populate to allow for early/erronious logging
 
             // WILL BE SENT OVER AT X-FPS, IMMEDIATELY UPDATE VISUALIZATION IN JS-SCOPE
             socket.on("data_send", (response) => {
