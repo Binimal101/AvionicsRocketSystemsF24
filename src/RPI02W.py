@@ -70,7 +70,7 @@ class FlightDataLogger:
             """
             remap = (0x00, 0x02, 0x01, 0, 0, 0)
             
-            self.gyroscope.axis_remap(remap)
+            self.gyroscope.axis_remap = remap #calls setter decorator to reinitialize values
             time.sleep(0.05) #needs about 300-500ms to kick-in
         
         #****ALTIMETER****
