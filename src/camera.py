@@ -7,7 +7,7 @@ def start_camera(dir_path: str):
     logging_config.setup_logging()
 
     cleanScriptName = "processVideo.sh"    
-    with open(dir_path + f"/{cleanScriptName}", "w") as f:
+    with open(f"{dir_path}/{cleanScriptName}", "w") as f:
         f.write('''#!/usr/bin/env bash
         #
         # merge_h264_segments.sh
@@ -70,7 +70,7 @@ def start_camera(dir_path: str):
         echo "Segments archived in: $SEGMENTS_DIR/"
         ''')
 
-        os.system(f"chmod 755 {cleanScriptName}")
+        os.system(f"chmod 755 {dir_path}/{cleanScriptName}")
 
     # Define the command as a list of arguments
     command = [
