@@ -49,19 +49,72 @@
                     let z = response[3];
                     
                     update(w, x, y, z);
+                    updateEulerDisplay();
 
                     quaternions[ct % 100] = [w, x, y, z];
                     ct++;
             });
+
+        // Function to convert quaternion to Euler angles
+        function quaternionToEuler(w, x, y, z) {
+            // Calculate Euler angles (roll, pitch, yaw) from quaternion
+            const ysqr = y * y;
+
+            // Roll (x-axis rotation)
+            const t0 = +2.0 * (w * x + y * z);
+            const t1 = +1.0 - 2.0 * (x * x + ysqr);
+            const roll = Math.atan2(t0, t1);
+
+            // Pitch (y-axis rotation)
+            const t2 = +2.0 * (w * y - z * x);
+            t2 = t2 > 1.0 ? 1.0 : t2;
+            t2 = t2 < -1.0 ? -1.0 : t2;
+            const pitch = Math.asin(t2);
+
+            // Yaw (z-axis rotation)
+            const t3 = +2.0 * (w * z + x * y);
+            const t4 = +1.0 - 2.0 * (ysqr + z * z);
+            const yaw = Math.atan2(t3, t4);
+
+            return { roll, pitch, yaw };
+        }
+
+        // Function to update Euler angles display
+        function updateEulerDisplay() {
+            const w = parseFloat(document.getElementById('wAngle').textContent);
+            const x = parseFloat(document.getElementById('xAngle').textContent);
+            const y = parseFloat(document.getElementById('yAngle').textContent);
+            const z = parseFloat(document.getElementById('zAngle').textContent);
+
+            const eulerAngles = quaternionToEuler(w, x, y, z);
+
+            document.getElementById('rollSpan').textContent = eulerAngles.roll.toFixed(2);
+            document.getElementById('pitchSpan').textContent = eulerAngles.pitch.toFixed(2);
+            document.getElementById('yawSpan').textContent = eulerAngles.yaw.toFixed(2);
+        }
+
+
     
         </script>
+        
         <div id="angles">
+            <h5>Quaternion</h5>
+            
             <span id="wAngleLabel">W: </span><span id="wAngle">0</span><br>
             <span id="xAngleLabel">X: </span><span id="xAngle">0</span><br>
             <span id="yAngleLabel">Y: </span><span id="yAngle">0</span><br>
             <span id="zAngleLabel">Z: </span><span id="zAngle">0</span><br>
+
+            <h5>Euler</h5>  
+
+            <span id="rollEulerLabel">Roll: </span><span id="eRoll">0</span><br>
+            <span id="pitchEulerLabel">Pitch: </span><span id="e">0</span><br>
+            <span id="yawEulerLabel">Yaw: </span><span id="yAngle">0</span><br>
+            
             <span id="fpsCounter">FPS:</span><span id="fps">0</span><br>
         </div>
+
+
         <canvas id="gl-canvas">
             
         </canvas>

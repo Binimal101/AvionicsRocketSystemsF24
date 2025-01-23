@@ -1,371 +1,234 @@
-# pylint: disable=invalid-name, consider-using-from-import, too-many-instance-attributes, too-many-arguments, E1101, unused-private-member
-"""
-This module contains the Altimeter class, which interfaces with the altimeter sensor
-to read pressure and temperature values. It includes functions to calculate altitude, 
-temperature, and pressure, and to handle sensor initialization and data updates.
-
-It uses a variety of sensor coefficients to perform precise calculations and handle sensor 
-readings, including error handling and data formatting.
-
-Module components:
-- Altimeter class with methods for pressure and temperature readings
-- Sensor initialization and calibration
-- Logging of data and errors during operation
-"""
-
-import time
-import logging
-import numpy
 import RPi.GPIO as GPIO
-import logging_config  # Import the logging configuration
+import time
+import numpy
 
-# Call the setup function to configure logging
-logging_config.setup_logging()
-
-class MS5611:
-    """
-    Class representing the MS5611 Barometric Pressure and Temperature Sensor.
-    Implements soft SPI communication and provides methods for sensor data reading and calculations.
-    """
-
+class MS5611(object):
+    
     # MS5611 commands and addresses
-    __MS5611_RESET = 0x1E  # Reset command
+    __MS5611_RESET             = 0x1E        # 
+    
+    __MS5611_CONVERT_D1_256    = 0x40        #
+    __MS5611_CONVERT_D1_512    = 0x42        #
+    __MS5611_CONVERT_D1_1024   = 0x44        #
+    __MS5611_CONVERT_D1_2048   = 0x46        #
+    __MS5611_CONVERT_D1_4096   = 0x48        #
+    
+    __MS5611_CONVERT_D2_256    = 0x50        #
+    __MS5611_CONVERT_D2_512    = 0x52        #
+    __MS5611_CONVERT_D2_1024   = 0x54        #
+    __MS5611_CONVERT_D2_2048   = 0x56        #
+    __MS5611_CONVERT_D2_4096   = 0x58        #
+    
+    __MS5611_ADC_READ          = 0x00        #
 
-    # Commands for converting pressure (D1) and temperature (D2)
-    __MS5611_CONVERT_D1_256 = 0x40
-    __MS5611_CONVERT_D1_512 = 0x42
-    __MS5611_CONVERT_D1_1024 = 0x44
-    __MS5611_CONVERT_D1_2048 = 0x46
-    __MS5611_CONVERT_D1_4096 = 0x48
+    __MS5611_C1                = 0xA2
+    __MS5611_C2                = 0xA4
+    __MS5611_C3                = 0xA6
+    __MS5611_C4                = 0xA8
+    __MS5611_C5                = 0xAA
+    __MS5611_C6                = 0xAC
+    __MS5611_D1                = 0xAC
+    __MS5611_D2                = 0xAE
+        
+    def __init__(self, cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer, board = GPIO.BCM):
 
-    __MS5611_CONVERT_D2_256 = 0x50
-    __MS5611_CONVERT_D2_512 = 0x52
-    __MS5611_CONVERT_D2_1024 = 0x54
-    __MS5611_CONVERT_D2_2048 = 0x56
-    __MS5611_CONVERT_D2_4096 = 0x58
+        '''Initialize Soft (Bitbang) SPI bus
+        Parameters:
+        - cs_pin:    Chip Select (CS) / Slave Select (SS) pin (Any GPIO)  
+        - clock_pin: Clock (SCLK / SCK) pin (Any GPIO)
+        - data_in_pin:  Data input (SO / MOSI) pin (Any GPIO)
+	    - data_out_pin: Data output (MISO) pin (Any GPIO)
+        - board:     (optional) pin numbering method as per RPi.GPIO library (GPIO.BCM (default) | GPIO.BOARD)
+        '''        
 
-    # Register to read ADC value
-    __MS5611_ADC_READ = 0x00
+        self.board = board
+        self.cs_pin = cs_pin
+        self.clock_pin = clock_pin
+        self.data_in_pin = data_in_pin
+        self.data_out_pin = data_out_pin
 
-    # PROM read commands for calibration coefficients
-    __MS5611_C1 = 0xA2
-    __MS5611_C2 = 0xA4
-    __MS5611_C3 = 0xA6
-    __MS5611_C4 = 0xA8
-    __MS5611_C5 = 0xAA
-    __MS5611_C6 = 0xAC
+        self.update_sleep_timer = update_sleep_timer
+                
+        # Default compensation parameters for MS5611
+        self.C1 = 40127         # UINT16
+        self.C2 = 36924         # UINT16
+        self.C3 = 23317         # UINT16
+        self.C4 = 23282         # UINT16
+        self.C5 = 33464         # UINT16
+        self.C6 = 28312         # UINT16        
+        self.D1 = 9085466       # UINT32
+        self.D2 = 8569150       # UINT32
+        
+        self.dT = 0          # INT32
+        self.TEMP = 0        # INT32
+        self.OFF = 0   # INT64
+        self.SENS = 0  # INT64
+        self.P = 0         # INT32  
+                
+        self.ground_pressure = None #initialized on first call to returnAltitude
 
-    # pylint: disable=R0917
-    def __init__(self, cs_pin, clock_pin, data_in_pin, data_out_pin,
-             update_sleep_timer, board=GPIO.BCM):
-        """
-        Initialize the MS5611 sensor with soft SPI communication.
+        # Initialize needed GPIO
+        GPIO.setmode(self.board)
+        GPIO.setup(self.cs_pin, GPIO.OUT)
+        GPIO.setup(self.clock_pin, GPIO.OUT)
+        GPIO.setup(self.data_in_pin, GPIO.IN)
+        GPIO.setup(self.data_out_pin, GPIO.OUT)
 
-        Args:
-            cs_pin (int): Chip Select (CS) pin.
-            clock_pin (int): Clock (SCK) pin.
-            data_in_pin (int): Data input (MOSI) pin.
-            data_out_pin (int): Data output (MISO) pin.
-            update_sleep_timer (float): Time (seconds) to wait between updates.
-            board (int): GPIO mode (default: GPIO.BCM).
-        """
-        try:
-            # Set up GPIO pins
-            self.board = board
-            self.cs_pin = cs_pin
-            self.clock_pin = clock_pin
-            self.data_in_pin = data_in_pin
-            self.data_out_pin = data_out_pin
+        # Pull chip select high to make chip inactive
+        GPIO.output(self.cs_pin, GPIO.HIGH)
+                      
+        # Reset sensor
+        self._send_command(self.__MS5611_RESET)
+        time.sleep(0.03)
 
-            # Time (in seconds) to wait between updates to the sensor
-            self.update_sleep_timer = update_sleep_timer
-
-            # Default compensation parameters
-            self.C1 = 40127
-            self.C2 = 36924
-            self.C3 = 23317
-            self.C4 = 23282
-            self.C5 = 33464
-            self.C6 = 28312
-            self.D1 = 9085466
-            self.D2 = 8569150
-
-            self.dT = 0
-            self.TEMP = 0
-            self.OFF = 0
-            self.SENS = 0
-            self.PRES = 0
-
-            # Initialize GPIO
-            GPIO.setmode(self.board)
-            GPIO.setup(self.cs_pin, GPIO.OUT)
-            GPIO.setup(self.clock_pin, GPIO.OUT)
-            GPIO.setup(self.data_in_pin, GPIO.IN)
-            GPIO.setup(self.data_out_pin, GPIO.OUT)
-
-            # Pull chip select high to make chip inactive
-            GPIO.output(self.cs_pin, GPIO.HIGH)
-
-            # Reset the sensor
-            self._send_command(self.__MS5611_RESET)
-            time.sleep(0.03)
-
-            # Read calibration coefficients
-            print("reading coeffs")
-            self._read_coefficients()
-            time.sleep(1.0)
-
-        except Exception as e:
-            logging.error("Error initializing MS5611 sensor: %s", e)
-            raise
+        # Load compensation parameters
+        print("reading coeffs")
+        self._read_coefficients()
+        time.sleep(1.0)
+        
+        # Updating data                
+        self.update()   
 
     def _spixfer(self, x):
-        """
-        Perform SPI data transfer.
-        
-        Args:
-            x (int): Data to send (8 bits).
-        
-        Returns:
-            int: Received data (8 bits).
-        """
-        try:
-            reply = 0
-            for i in range(7, -1, -1):
-                reply <<= 1
-                GPIO.output(self.clock_pin, GPIO.LOW)
-                GPIO.output(self.data_out_pin, x & (1 << i))
-                GPIO.output(self.clock_pin, GPIO.HIGH)
-                if GPIO.input(self.data_in_pin):
-                    reply |= 1
-            return reply
-        except Exception as e:
-            logging.error("Error in SPI transfer: %s", e)
-            raise
-
+        '''SPI send/recieve function'''
+        reply = 0
+        for i in range(7,-1,-1):
+            reply <<= 1
+            GPIO.output(self.clock_pin, GPIO.LOW)
+            GPIO.output(self.data_out_pin, x & (1<<i))
+            GPIO.output(self.clock_pin, GPIO.HIGH)
+            if (GPIO.input(self.data_in_pin)):
+                reply |= 1
+        return reply
+       
     def _read16(self, register):
-        """
-        Read a 16-bit value from a given register.
+        '''Reads 16-bits from specified register'''
+        GPIO.output(self.cs_pin, GPIO.LOW)  
+        self._spixfer(register)    # send request to read from register
+        value = (self._spixfer(0) << 8) | self._spixfer(0) 
+        GPIO.output(self.cs_pin, GPIO.HIGH)
         
-        Args:
-            register (int): Register address.
-        
-        Returns:
-            int: 16-bit value read from the register.
         """
-        try:
-            GPIO.output(self.cs_pin, GPIO.LOW)
-            self._spixfer(register)
-            value = (self._spixfer(0) << 8) | self._spixfer(0)
-            GPIO.output(self.cs_pin, GPIO.HIGH)
-            return value
-        except Exception as e:
-            logging.error("Error reading 16-bit value from register %d: %s", register, e)
-            raise
+        # Add validation
+        if value == 0xFFFF:  # Invalid read
+            raise IOError(f"Failed to read register {hex(register)}")
+        """
+
+        return value
 
     def _read24(self, register):
-        """
-        Read a 24-bit value from a given register.
-        
-        Args:
-            register (int): Register address.
-        
-        Returns:
-            int: 24-bit value read from the register.
-        """
-        try:
-            GPIO.output(self.cs_pin, GPIO.LOW)
-            self._spixfer(register)
-            value = (self._spixfer(0) << 16) | (self._spixfer(0) << 8) | self._spixfer(0)
-            GPIO.output(self.cs_pin, GPIO.HIGH)
-            return value
-        except Exception as e:
-            logging.error("Error reading 24-bit value from register %d: %s", register, e)
-            raise
-
-    def _send_command(self, command):
-        """
-        Send a command to the sensor.
-        
-        Args:
-            command (int): Command to send.
-        """
+        '''Reads 24-bits from specified register'''
         GPIO.output(self.cs_pin, GPIO.LOW)
-        self._spixfer(command)
+        self._spixfer(register)    # send request to read from register
+        value = (self._spixfer(0) << 16) | (self._spixfer(0) << 8) | self._spixfer(0)  
         GPIO.output(self.cs_pin, GPIO.HIGH)
+        return value
+    
+    def _send_command(self, command):
+        '''Sends command via SPI'''
+        GPIO.output(self.cs_pin, GPIO.LOW)
+        self._spixfer(command) 
+        GPIO.output(self.cs_pin, GPIO.HIGH)     
 
     def _read_coefficients(self):
-        """
-        Read the factory-set calibration coefficients.
-        """
-        try:
-            self.C1 = self._read16(self.__MS5611_C1)
-            self.C2 = self._read16(self.__MS5611_C2)
-            self.C3 = self._read16(self.__MS5611_C3)
-            self.C4 = self._read16(self.__MS5611_C4)
-            self.C5 = self._read16(self.__MS5611_C5)
-            self.C6 = self._read16(self.__MS5611_C6)
+        '''Reads the factory-set coefficients'''
+        self.C1 = self._read16(self.__MS5611_C1)   # UINT16
+        self.C2 = self._read16(self.__MS5611_C2)   # UINT16
+        self.C3 = self._read16(self.__MS5611_C3)   # UINT16
+        self.C4 = self._read16(self.__MS5611_C4)   # UINT16
+        self.C5 = self._read16(self.__MS5611_C5)   # UINT16
+        self.C6 = self._read16(self.__MS5611_C6)   # UINT16
 
-            # Logging coefficients
-            for idx, coeff in enumerate(
-                [self.C1, self.C2, self.C3, self.C4, self.C5, self.C6], start=1):
-                logging.info("C%d = %d", idx, coeff)
-                print(f'C{idx} = {coeff:10d}')
-        except Exception as e:
-            logging.error("Error reading calibration coefficients: %s", e)
-            raise
+        """
+        if self.C1 == 0 or self.C6 == 0:
+            raise ValueError("Invalid calibration coefficients read from MS5611")
+        """
 
+        print('C1 = {0:10d}'.format(self.C1))
+        print('C2 = {0:10d}'.format(self.C2))
+        print('C3 = {0:10d}'.format(self.C3))
+        print('C4 = {0:10d}'.format(self.C4))
+        print('C5 = {0:10d}'.format(self.C5))
+        print('C6 = {0:10d}'.format(self.C6))
+       
+            
     def _read_adc(self):
-        """
-        Read a 24-bit ADC value from the sensor.
+        GPIO.output(self.cs_pin, GPIO.LOW)
+        dump = self._spixfer(self.__MS5611_ADC_READ)    # send request to read from register
+        time.sleep(0.1)
+        byteH = self._spixfer(0)    # send request to read from register
+        byteM = self._spixfer(0)    # send request to read from register
+        byteL = self._spixfer(0)    # send request to read from register
+        value = (byteH << 16) | (byteM << 8) | byteL 
+        GPIO.output(self.cs_pin, GPIO.HIGH)
+        return value  
+      
+    def _refreshPressure(self, OSR = __MS5611_CONVERT_D1_4096):
+        self._send_command(OSR)
         
-        Returns:
-            int: ADC value.
-        """
-        try:
-            GPIO.output(self.cs_pin, GPIO.LOW)
-            self._spixfer(self.__MS5611_ADC_READ)
-            time.sleep(0.1)
-            value = (self._spixfer(0) << 16) | (self._spixfer(0) << 8) | self._spixfer(0)
-            GPIO.output(self.cs_pin, GPIO.HIGH)
-            return value
-        except Exception as e:
-            logging.error("Error reading ADC value from sensor: %s", e)
-            raise
-
-
-    def _refresh_pressure(self, OSR=__MS5611_CONVERT_D1_4096):
-        """
-        Refresh pressure data by sending the corresponding conversion command.
         
-        Args:
-            OSR (int): Oversampling rate (default: 4096).
-        """
-        try:
-            self._send_command(OSR)
-        except Exception as e:
-            logging.error("Error refreshing pressure with OSR %s: %s", OSR, e)
-            raise
-
-    def _refresh_temperature(self, OSR=__MS5611_CONVERT_D2_4096):
-        """
-        Refresh temperature data by sending the corresponding conversion command.
+    def _refreshTemperature(self, OSR = __MS5611_CONVERT_D2_4096):
+        self._send_command(OSR)
+               
+    def _readPressure(self):
+        self.D1 = self._read_adc()
         
-        Args:
-            OSR (int): Oversampling rate (default: 4096).
-        """
-        try:
-            self._send_command(OSR)
-        except Exception as e:
-            logging.error("Error refreshing temperature with OSR %s: %s", OSR, e)
-            raise
-
-    def _read_pressure(self):
-        """
-        Read the pressure data from the sensor ADC.
-        """
-        try:
-            self.D1 = self._read_adc()
-        except Exception as e:
-            logging.error("Error reading pressure data: %s", e)
-            raise
-
-    def _read_temperature(self):
-        """
-        Read the temperature data from the sensor ADC.
-        """
-        try:
-            self.D2 = self._read_adc()
-        except Exception as e:
-            logging.error("Error reading temperature data: %s", e)
-            raise
-
+    def _readTemperature(self):
+        self.D2 = self._read_adc()
+        
     def update(self):
-        """
-        Update the pressure and temperature readings.
-        """
-        try:
-            self._refresh_pressure()
-            time.sleep(self.update_sleep_timer / 2)
-            self._read_pressure()
-
-            self._refresh_temperature()
-            time.sleep(self.update_sleep_timer / 2)
-            self._read_temperature()
-
-            self._calculate_pressure_and_temperature()
-
-        except Exception as e:
-            logging.error("Error updating sensor data: %s", e)
-            print(f"ALTIMETER UPDATE FAILURE, {e}", flush=True)
+        self._refreshPressure()
+        time.sleep(self.update_sleep_timer / 2)
+        self._readPressure()
+        
+        self._refreshTemperature()
+        time.sleep(self.update_sleep_timer / 2)
+        self._readTemperature()
+        
+        self.calculatePressureAndTemperature()
 
     def returnPressure(self):
-        """
-        Return the current pressure value, formatted to 3 decimal places.
+        return '{:.3f}'.format(self.PRES)		    
         
-        Returns:
-            str: Formatted pressure value in kPa.
-        """
-        try:
-            return f'{self.PRES:.3f}'
-        except Exception as e:
-            logging.error("Error returning pressure value: %s", e)
-            print(f"ALTIMETER RETURN PRESSURE FAILURE, {e}", flush=True)
-
     def returnTemperature(self):
-        """
-        Return the current temperature value, formatted to 2 decimal places.
-        
-        Returns:
-            str: Formatted temperature value in degrees Celsius.
-        """
-        try:
-            return f'{self.TEMP:.2f}'
-        except Exception as e:
-            logging.error("Error returning temperature value: %s", e)
-            print(f"ALTIMETER RETURN TEMPERATURE FAILURE, {e}", flush=True)
-
-
-    def _calculate_pressure_and_temperature(self):
-        """
-        Perform compensation calculations for temperature and pressure.
-        """
+        return '{:.2f}'.format(self.TEMP)
+    
+    def calculatePressureAndTemperature(self):
         dT = self.D2 - self.C5 * 2**8
         self.TEMP = 2000 + dT * self.C6 / 2**23
-
-        T2 = 0
+        
         OFF = self.C2 * 2**16 + (self.C4 * dT) / 2**7
         SENS = self.C1 * 2**15 + (self.C3 * dT) / 2**8
-
-        if self.TEMP >= 2000:
+        
+        if (self.TEMP >= 2000):
             T2 = 0
             OFF2 = 0
             SENS2 = 0
-        elif self.TEMP < 2000:
+        elif (self.TEMP < 2000):
             T2 = dT * dT / 2**31
             OFF2 = 5 * ((self.TEMP - 2000) ** 2) / 2
             SENS2 = OFF2 / 2
-        elif self.TEMP < -1500:
-            T2 = dT * dT / 2**31
+        elif (self.TEMP < -1500):
             OFF2 = OFF2 + 7 * ((self.TEMP + 1500) ** 2)
             SENS2 = SENS2 + 11 * (self.TEMP + 1500) ** 2 / 2
-
+        
         self.TEMP = self.TEMP - T2
         OFF = OFF - OFF2
         SENS = SENS - SENS2
-
+        
         self.PRES = (self.D1 * SENS / 2**21 - OFF) / 2**15
-
+        
         self.TEMP = self.TEMP / 100.0 # Temperature, C
         self.PRES = self.PRES / 1000.0 # Pressure, kPa
-
-    def return_altitude(self, sea_level_kPa=101.325):
-        """
-        Calculate altitude based on pressure readings.
-        """
+         
+    def returnAltitude(self):
 
         if not type(self.PRES) == float or self.PRES < 0:
-            return -1 #clean invalid data post-process
+            print("pressure syncing, skipping valuation")
+            return 0
         
-        altitude = 44330 * (1.0 - numpy.power(self.PRES / sea_level_kPa, 0.1903))
-        return f'{altitude:.2f}'
+        if not self.ground_pressure:
+            self.ground_pressure = self.PRES
+        
+        altitude = 44330 * (1.0 - numpy.power(self.PRES / self.ground_pressure, 0.1903))
+        return altitude
