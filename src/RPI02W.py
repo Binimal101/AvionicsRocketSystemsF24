@@ -21,9 +21,9 @@ import logging, logging_config
 logging_config.setup_logging()
 
 #sleep timers
-data_collection_sleep_timer = 0.25 #TODO test
+data_collection_sleep_timer = 0.1 #TODO test
 
-altimeter_read_update_timer = 0.05
+altimeter_read_update_timer = 0.08 # 0.05 is too fast, 0.1 is too slow. Tested 0.08
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
@@ -45,13 +45,14 @@ class FlightDataLogger:
         
     def setup_hardware(self) -> list:
         
+        #radio
         self.radio = RYLR998_Transmit()
     
         self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
         self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
         
-        # This variable holds the last temperature reading to prevent erroneous readings
-        self.gyro_last_temperature_reading = 0xFFFF
+        #gyroscope
+        self.gyro_last_temperature_reading = 0xFFFF # This variable holds the last temperature reading to prevent erroneous readings
 
         # (x:0x00, y:0x01, z:0x02, x_sign, y-sign, z_sign)
         """
@@ -64,14 +65,14 @@ class FlightDataLogger:
         # self.gyroscope.axis_remap = remap #calls setter decorator to reinitialize values
         # time.sleep(0.05) #needs about 300-500ms to kick-in
         
-        
+        #altimeter
         cs_pin = 22
         clock_pin = 11
         data_in_pin = 9
         data_out_pin = 10
 
-        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
-            
+        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer=0.2)
+        
     def _transmit_process(self, qbuff: mp.Queue):
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
@@ -90,6 +91,19 @@ class FlightDataLogger:
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
         return response #sea_level_pressure
+
+    def start_altimeter_thread(self):
+        def update_altimeter_vals():
+                while True:
+                    self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
+                    self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
+                    self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude()
+
+                    self.altimeter.update()
+                    time.sleep(altimeter_read_update_timer)
+        
+        self.altimeter_thread = threading.Thread(target=update_altimeter_vals, daemon=True)
+        self.altimeter_thread.start()
 
     def get_temperature(self):
         result = self.gyroscope.temperature  # Get the current temperature from the sensor
@@ -127,6 +141,8 @@ class FlightDataLogger:
         
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
 
+        self.start_altimeter_thread()
+
         while True:  # Main loop for continuous data collection
             with open(file_path, "a") as file: #open & close for each iteration to avoid corruption as best as possible
                     
@@ -147,14 +163,6 @@ class FlightDataLogger:
                 self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
                 self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
-                
-                #updates in seperate thread as refresh rate is only 20hz, just count same values until ready to refresh
-                
-                self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
-                self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude()
-
-                self.altimeter.update()
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ",\n\n"
