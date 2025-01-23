@@ -84,6 +84,8 @@ def start_camera(dir_path: str):
 
     # Run the command
     cameraProcess = subprocess.Popen(command) #literal equivalent to execlp() in c
+
+    os.system(f"chmod 755 syncify.sh") #when repulled on RPI02W, syncify.sh is not executable
     syncProcess = subprocess.Popen(["./syncify.sh"])
 
     logging.info(f"CAMERA Process started with PID: {cameraProcess.pid} at {time.time()}\n")

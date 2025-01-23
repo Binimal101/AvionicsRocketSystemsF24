@@ -47,7 +47,6 @@ class FlightDataLogger:
         
         self.radio = RYLR998_Transmit()
     
-        
         self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
         self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
         
@@ -151,11 +150,11 @@ class FlightDataLogger:
                 
                 #updates in seperate thread as refresh rate is only 20hz, just count same values until ready to refresh
                 
-                self.flight_package["altimeter"]["temperature"] = float(ms.returnTemperature()) * (9/5) + 32
-                self.flight_package["altimeter"]["pressure"] = ms.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = ms.returnAltitude()
+                self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
+                self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
+                self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude()
 
-                ms.update()
+                self.altimeter.update()
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ",\n\n"
