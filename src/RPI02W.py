@@ -13,6 +13,7 @@ import board, adafruit_bno055
 
 #files
 from altimeter import MS5611
+from quaternion import quaternion_relative
 from transmit import RYLR998_Transmit
 from camera import start_camera
 
@@ -23,7 +24,7 @@ logging_config.setup_logging()
 #sleep timers
 data_collection_sleep_timer = 0.1 #TODO test
 
-altimeter_read_update_timer = 0.08 # 0.05 is too fast, 0.1 is too slow. Tested 0.08
+altimeter_read_update_timer = 0.05
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
@@ -47,11 +48,11 @@ class FlightDataLogger:
         
         #radio
         self.radio = RYLR998_Transmit()
-    
+        
+        #gyroscope
         self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
         self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
         
-        #gyroscope
         self.gyro_last_temperature_reading = 0xFFFF # This variable holds the last temperature reading to prevent erroneous readings
 
         # (x:0x00, y:0x01, z:0x02, x_sign, y-sign, z_sign)
@@ -137,6 +138,15 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
+        #at this point, we have a reference quaternion for the zeroed gyroscope; post start signal
+        #we will use this to calculate the relative quaternion for each data collection
+        while True: 
+            self.reference_quaternion = self.flight_package["gyro"]["quaternion"]
+            if not all(self.reference_quaternion): 
+                time.sleep(0.1)
+            else:
+                break
+
         open(file_path, "w").close() # empties file for new logging on date
         
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
@@ -151,9 +161,8 @@ class FlightDataLogger:
 
                 # Collect sensor data and store in the flight package
                 
-                #euler and quaternion data are respective to cardinal directions assigned at calibration
-                self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
-                self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
+                self.flight_package["gyro"]["quaternion"] = quaternion_relative(*self.reference_quaternion, *list(self.gyroscope.quaternion))
+                self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler) #doesn't account for "zeroing" mechanism
                 
                 if len([x for x in [*self.flight_package["gyro"]["quaternion"], *self.flight_package["gyro"]["euler"]] if x is None]):
                     continue #NoneType encountered in readloop

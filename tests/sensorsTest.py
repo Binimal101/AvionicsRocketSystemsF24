@@ -136,7 +136,7 @@ class FlightDataLogger:
 
                 self.flight_package["altimeter"]["temperature"] = float(ms.returnTemperature()) * (9/5) + 32
                 self.flight_package["altimeter"]["pressure"] = ms.returnPressure()
-                self.flight_package["altimeter"]["altitude"] = ms.returnAltitude(101.7)
+                self.flight_package["altimeter"]["altitude"] = ms.returnAltitude()
                 
                 ms.update()
                 
