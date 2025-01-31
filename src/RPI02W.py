@@ -22,7 +22,7 @@ import logging, logging_config
 logging_config.setup_logging()
 
 #sleep timers
-data_collection_sleep_timer = 0.01 #TODO test
+data_collection_sleep_timer = 0.01
 
 altimeter_read_update_timer = 0.05
 
@@ -71,7 +71,7 @@ class FlightDataLogger:
         data_in_pin = 9
         data_out_pin = 10
 
-        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer=0.2)
+        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer=0.05)
         
     def _transmit_process(self, qbuff: mp.Queue):
         while True:
