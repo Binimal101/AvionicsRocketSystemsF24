@@ -35,7 +35,7 @@ def quaternion_relative(w0, x0, y0, z0, w1, x1, y1, z1):
     from q0 to q1 (i.e., "delta" or "difference" quaternion).
     """
     
-    if not all(w1, x1, y1, z1):
+    if not all((w1, x1, y1, z1)):
         return (None, None, None, None) #gets caught & handled in outer scope
     
     # Step 1: invert q0

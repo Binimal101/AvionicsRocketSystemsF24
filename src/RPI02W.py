@@ -22,7 +22,7 @@ import logging, logging_config
 logging_config.setup_logging()
 
 #sleep timers
-data_collection_sleep_timer = 0.1 #TODO test
+data_collection_sleep_timer = 0.01 #TODO test
 
 altimeter_read_update_timer = 0.05
 
@@ -55,16 +55,15 @@ class FlightDataLogger:
         
         self.gyro_last_temperature_reading = 0xFFFF # This variable holds the last temperature reading to prevent erroneous readings
 
-        # (x:0x00, y:0x01, z:0x02, x_sign, y-sign, z_sign)
         """
-        We assume x is fine l-r (with correct signage)
-        We found that z & y were incorrect with mapping, undeterminate of signage TODO test
+        (x:0x00, y:0x01, z:0x02, x_sign, y-sign, z_sign)
+        the x and y variables must be remapped in order to match the orientation of the rocket
         """
 
-        # TODO remap = (0x00, 0x02, 0x01, 0, 0, 0)
+        remap = (0x00, 0x02, 0x01, 0, 0, 0)
         
-        # self.gyroscope.axis_remap = remap #calls setter decorator to reinitialize values
-        # time.sleep(0.05) #needs about 300-500ms to kick-in
+        self.gyroscope.axis_remap = remap #calls setter decorator to reinitialize values
+        time.sleep(0.05) #needs about 30-50ms to kick-in
         
         #altimeter
         cs_pin = 22
@@ -141,14 +140,14 @@ class FlightDataLogger:
         #at this point, we have a reference quaternion for the zeroed gyroscope; post start signal
         #we will use this to calculate the relative quaternion for each data collection
         while True: 
-            self.reference_quaternion = self.flight_package["gyro"]["quaternion"]
+            self.reference_quaternion = self.gyroscope.quaternion
             if not all(self.reference_quaternion): 
                 time.sleep(0.1)
             else:
                 break
 
-        open(file_path, "w").close() # empties file for new logging on date
-        
+        # open(file_path, "w").close() 
+
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
 
         self.start_altimeter_thread()

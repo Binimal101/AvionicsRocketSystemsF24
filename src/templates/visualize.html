@@ -88,22 +88,22 @@
 
             const eulerAngles = quaternionToEuler(w, x, y, z);
 
-            document.getElementById('rollSpan').textContent = eulerAngles.roll.toFixed(2);
-            document.getElementById('pitchSpan').textContent = eulerAngles.pitch.toFixed(2);
-            document.getElementById('yawSpan').textContent = eulerAngles.yaw.toFixed(2);
+            document.getElementById('rollSpan').textContent = (180 / Math.PI) * eulerAngles.roll.toFixed(2);
+            document.getElementById('pitchSpan').textContent = (180 / Math.PI) * eulerAngles.pitch.toFixed(2);
+            document.getElementById('yawSpan').textContent = (180 / Math.PI) * eulerAngles.yaw.toFixed(2);
         }
 
         </script>
         
         <div id="angles">
-            <h5>Quaternion</h5>
-            
+            <h3>Quaternion<h3>
+
             <span id="wAngleLabel">W: </span><span id="wAngle">0</span><br>
             <span id="xAngleLabel">X: </span><span id="xAngle">0</span><br>
             <span id="yAngleLabel">Y: </span><span id="yAngle">0</span><br>
             <span id="zAngleLabel">Z: </span><span id="zAngle">0</span><br>
 
-            <h5>Euler</h5>  
+            <h3>Euler</h3>  
 
             <span id="rollEulerLabel">Roll: </span><span id="rollSpan">0</span><br>
             <span id="pitchEulerLabel">Pitch: </span><span id="pitchSpan">0</span><br>
@@ -131,7 +131,6 @@
         <script>
             document.getElementById('logDataButton').addEventListener('click', () => {
                 const inputData = document.getElementById('input_data');
-                
 
                 console.log("PRINTING LAST 100 SAMPLES:");
                 for(let i = 0; i < 100; i++) {
