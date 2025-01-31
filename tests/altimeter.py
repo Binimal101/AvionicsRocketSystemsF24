@@ -65,6 +65,8 @@ class MS5611(object):
         self.SENS = 0  # INT64
         self.P = 0         # INT32  
                 
+        self.ground_pressure = None #initialized on first call to returnAltitude
+
         # Initialize needed GPIO
         GPIO.setmode(self.board)
         GPIO.setup(self.cs_pin, GPIO.OUT)
@@ -219,11 +221,14 @@ class MS5611(object):
         self.TEMP = self.TEMP / 100.0 # Temperature, C
         self.PRES = self.PRES / 1000.0 # Pressure, kPa
          
-    def returnAltitude(self, seaLevel_kPa = 101.325):
-        
+    def returnAltitude(self):
+
         if not type(self.PRES) == float or self.PRES < 0:
             print("pressure syncing, skipping valuation")
             return 0
         
-        altitude = 44330 * (1.0 - numpy.power(self.PRES / seaLevel_kPa, 0.1903))
-        return '{:.2f}'.format(altitude)
+        if not self.ground_pressure:
+            self.ground_pressure = self.PRES
+        
+        altitude = 44330 * (1.0 - numpy.power(self.PRES / self.ground_pressure, 0.1903))
+        return altitude

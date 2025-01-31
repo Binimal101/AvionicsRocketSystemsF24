@@ -13,88 +13,72 @@ import board, adafruit_bno055
 
 #files
 from altimeter import MS5611
+from quaternion import quaternion_relative
 from transmit import RYLR998_Transmit
 from camera import start_camera
 
-#sleep timers
-data_collection_sleep_timer = 0.008 #TODO test
+import logging, logging_config
 
-altimeter_update_sleep_timer = 0.1
+logging_config.setup_logging()
+
+#sleep timers
+data_collection_sleep_timer = 0.01
+
 altimeter_read_update_timer = 0.05
 
 #global scope dynamic variables (inter-thread comms)
 pressure, temperature, altitude = 0, 0, 0
 
-def fixQuaternionRotation(quaternion: list) -> list:
-    """
-    fixes axes so that data is wrt rocket, not sensor
-
-    :param quaternion: [w,x,y,z] wrt sensor, through testing, 
-    
-    TODO test: quaternion should be [w,y,z,x] wrt rocket?
-    """
-
-    w, x, y, z = range(4)
-
-    return quaternion
-
 class FlightDataLogger:
     def __init__(self):
         print("Setting up measurement devices")
+        self.setup_hardware()
 
-        # SETUP WITH THREADS THEN WAIT FOR EVERYTHING
-        thread_queue = self.setup_hardware() #avoids b2b sleep hassle for setting up configs
-        [x.join() for x in thread_queue]
-        
         self.transmit_queue = mp.Queue()
         self.transmit_process = mp.Process(target=self._transmit_process, args=(self.transmit_queue,))
         self.transmit_process.start()
 
         self.flight_package = {
             "gyro": {},  # Dictionary to hold gyroscope data
-            "altimeter": {},  # Dictionary to hold altimeter data
+            "altimeter": {"temperature": -1, "pressure": -1, "altitude": -1},  # Dictionary to hold altimeter data
             "time": -1,  # Time elapsed since the start of data collection
         }
         
-        self.sensor_lock = threading.Lock() #ensures that the altimeter does NOT get fiddled with in multiple threaded scopes
-
     def setup_hardware(self) -> list:
         
-        #****RADIO****
-        def init_radio():
-            self.radio = RYLR998_Transmit()
-
-        #****GYROSCOPE****
-        def init_gyro():
-            self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
-            self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
-            
-            # This variable holds the last temperature reading to prevent erroneous readings
-            self.gyro_last_temperature_reading = 0xFFFF
+        #radio
+        self.radio = RYLR998_Transmit()
         
-        #****ALTIMETER****
-        def init_altimeter():
-            cs_pin = 22
-            clock_pin = 11
-            data_in_pin = 9
-            data_out_pin = 10
-
-            self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, data_collection_sleep_timer)
-            #Altimeter is updated in the multithreaded scope as to avoid calling update twice 
-
-        #works through the sleepiness of the configurations for each module to lessen start timer
-        threads = [threading.Thread(target=x) for x in (init_altimeter, init_radio, init_gyro)]
-        [x.start() for x in threads]
+        #gyroscope
+        self.i2c = board.I2C()  # Initializes the I2C interface for communication with the sensor
+        self.gyroscope = adafruit_bno055.BNO055_I2C(self.i2c)
         
-        return threads #joined in outer scope
-    
+        self.gyro_last_temperature_reading = 0xFFFF # This variable holds the last temperature reading to prevent erroneous readings
+
+        """
+        (x:0x00, y:0x01, z:0x02, x_sign, y-sign, z_sign)
+        the x and y variables must be remapped in order to match the orientation of the rocket
+        """
+
+        remap = (0x00, 0x02, 0x01, 0, 0, 0)
+        
+        self.gyroscope.axis_remap = remap #calls setter decorator to reinitialize values
+        time.sleep(0.05) #needs about 30-50ms to kick-in
+        
+        #altimeter
+        cs_pin = 22
+        clock_pin = 11
+        data_in_pin = 9
+        data_out_pin = 10
+
+        self.altimeter = MS5611(cs_pin, clock_pin, data_in_pin, data_out_pin, update_sleep_timer=0.05)
+        
     def _transmit_process(self, qbuff: mp.Queue):
         while True:
             payload = qbuff.get() #will wait the process until an item is available to get
 
             time_delta, quaternion = payload
-            
-            print(f"TRANSMITTING PAYLOAD FROM MAIN SCOPE: {time_delta}, {quaternion}", flush=True)
+
             self.radio.send(time_delta, quaternion)
 
     def transmit(self, time_delta, quaternion):
@@ -102,10 +86,24 @@ class FlightDataLogger:
             self.transmit_queue.put((time_delta, quaternion))
         except Exception as e:
             print(f"ran into error trying to transmit: {e}", flush=True)
+            logging.error(f"ran into error trying to transmit: {e}")
 
     def wait_for_start_signal(self) -> float:
         response = self.radio.wait_for_start_message()
         return response #sea_level_pressure
+
+    def start_altimeter_thread(self):
+        def update_altimeter_vals():
+                while True:
+                    self.flight_package["altimeter"]["temperature"] = float(self.altimeter.returnTemperature()) * (9/5) + 32
+                    self.flight_package["altimeter"]["pressure"] = self.altimeter.returnPressure()
+                    self.flight_package["altimeter"]["altitude"] = self.altimeter.returnAltitude()
+
+                    self.altimeter.update()
+                    time.sleep(altimeter_read_update_timer)
+        
+        self.altimeter_thread = threading.Thread(target=update_altimeter_vals, daemon=True)
+        self.altimeter_thread.start()
 
     def get_temperature(self):
         result = self.gyroscope.temperature  # Get the current temperature from the sensor
@@ -120,27 +118,8 @@ class FlightDataLogger:
         self.gyro_last_temperature_reading = result  # Update the last temperature reading
         return result  # Return the processed temperature reading
 
-    def readAltimeterValues(self, sea_level_pressure: float):
-        global pressure, temperature, altitude
-
-        while True:
-            with self.sensor_lock: #ensures this only begins to run ONCE AT A TIME (in theory should behave this way anyway)
-                self.altimeter.update() #sends signal to device to ready new information
-
-                time.sleep(altimeter_read_update_timer) #tested to be reliable with altimeter values
-                
-                temperature = float(self.altimeter.returnTemperature()) * (9/5) + 32 #farenheight rocks
-                pressure = self.altimeter.returnPressure()
-                altitude = self.altimeter.return_altitude(sea_level_pressure)
-
     def log_flight_data(self, sea_level_pressure: float):
         """Log the flight data to a file continuously."""
-
-        #when thread spawned, self.altimeter will modify these for pickens in event-loop
-        global pressure, temperature, altitude
-
-        altimeter_read_thread = threading.Thread(target=self.readAltimeterValues, args=(sea_level_pressure, ))
-        altimeter_read_thread.start()
 
         #create new logfile in ../flightLogs/logfileNM
         current_file_dir = os.path.dirname(__file__)
@@ -158,9 +137,20 @@ class FlightDataLogger:
         start_payload_time = time.time() 
         self.start_time = time.time()
 
-        open(file_path, "w").close() # empties file for new logging on date
-        
+        #at this point, we have a reference quaternion for the zeroed gyroscope; post start signal
+        #we will use this to calculate the relative quaternion for each data collection
+        while True: 
+            self.reference_quaternion = self.gyroscope.quaternion
+            if not all(self.reference_quaternion): 
+                time.sleep(0.1)
+            else:
+                break
+
+        # open(file_path, "w").close() 
+
         start_camera(dir_path) #Popen's a subprocess for recording data, t=0 ~ self.start_time
+
+        self.start_altimeter_thread()
 
         while True:  # Main loop for continuous data collection
             with open(file_path, "a") as file: #open & close for each iteration to avoid corruption as best as possible
@@ -170,23 +160,17 @@ class FlightDataLogger:
 
                 # Collect sensor data and store in the flight package
                 
-                #euler and quaternion data are respective to cardinal directions assigned at calibration
-                self.flight_package["gyro"]["quaternion"] = list(self.gyroscope.quaternion)
-                self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler)
+                self.flight_package["gyro"]["quaternion"] = quaternion_relative(*self.reference_quaternion, *list(self.gyroscope.quaternion))
+                self.flight_package["gyro"]["euler"] = list(self.gyroscope.euler) #doesn't account for "zeroing" mechanism
                 
                 if len([x for x in [*self.flight_package["gyro"]["quaternion"], *self.flight_package["gyro"]["euler"]] if x is None]):
                     continue #NoneType encountered in readloop
                 
                 self.flight_package["gyro"]["linearAcceleration"] = list(self.gyroscope.linear_acceleration)
-                self.flight_package["gyro"]["radialVelocity"] = fixQuaternionRotation(list(self.gyroscope.gyro))
+                self.flight_package["gyro"]["radialVelocity"] = list(self.gyroscope.gyro)
                 self.flight_package["gyro"]["magnetic"] = list(self.gyroscope.magnetic)
                 self.flight_package["gyro"]["gravity"] = list(self.gyroscope.gravity)
                 self.flight_package["gyro"]["temperature"] = self.get_temperature()
-                
-                #updates in seperate thread as refresh rate is only 20hz, just count same values until ready to refresh
-                self.flight_package["altimeter"]["temperature"] = temperature
-                self.flight_package["altimeter"]["pressure"] = pressure
-                self.flight_package["altimeter"]["altitude"] = altitude
 
                 # Write the flight package as JSON to the log file
                 json_data = json.dumps(self.flight_package) + ",\n\n"
@@ -209,4 +193,8 @@ if __name__ == "__main__":
         print(e, "ERR, defaulting to 101.7 for sea_level_pressure")
         sea_level_pressure = 101.7
     
-    logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
+    try:
+        logger.log_flight_data(sea_level_pressure)  # Start logging flight data & begin sub process for transmission 
+    except Exception as e: #TODO redundant restart
+        print(f"Logging Failed, Error: {e}\nexiting...")
+        logging.error(f"Logging Failed, Error: {e}\nexiting...")
