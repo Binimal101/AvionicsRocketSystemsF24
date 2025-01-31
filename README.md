@@ -5,10 +5,6 @@
 ## Overview
 This project is designed to support data collection and transmission using a RYLR998 LoRa radio module in a rocket system. The system is integrated with a Flask web application that allows real-time data visualization and control via a web interface. The RYLR998 module is responsible for sending and receiving data, and the Flask web app manages communication with the module and provides a visual display of the transmitted data.
 
-Key functionalities of the system include:
-1. **Real-time Data Collection** - Collects and transmits sensor data via the RYLR998 LoRa module.
-2. **Flask Web Interface** - Allows users to initiate data collection and visualize data through WebGL.
-3. **Socket Communication** - Real-time communication between the Flask server and the front-end using Flask-SocketIO.
 
 ## Table of Contents
 - [System Design](#system-design)
@@ -19,23 +15,15 @@ Key functionalities of the system include:
 - [Contributors](#Contributors)
 - [License](#license)
 
-## System Design
-The system is composed of several components that interact to ensure efficient data collection, transmission, and visualization.
-
-Key components include:
-1. **Flask Web Application** - Handles routes for web pages and manages real-time communication with the front-end.
-2. **RYLR998 LoRa Communication** - Handles data reception and transmission between the rocket and the ground control.
-3. **SocketIO Communication** - Enables real-time data transfer between the server and the client.
-4. **Password Authentication** - Ensures that data collection starts only when the correct password is provided.
-
-The system uses a combination of Flask-SocketIO and the RYLR998 module to collect, transmit, and visualize data, while ensuring secure and authenticated operations.
-
 ## Features
 - **Data Collection** - Collects sensor data from the LoRa module and sends it to the Flask server for visualization.
-- **Real-time Communication** - Uses Flask-SocketIO for real-time updates to the client.
+- **Flask Web Interface** - Allows users to initiate data collection and visualize data through WebGL.
+- **Socket Communication** - Real-time communication between the Flask server and the front-end using Flask-SocketIO.
 - **Password Authentication** - Ensures that data collection can only start with the correct password.
 - **WebGL Visualization** - Displays the received data in real-time using WebGL on the front-end.
 - **LoRa Data Transmission** - Encodes and sends quaternion data over the LoRa radio module.
+- **Quaternion Based Interpolation** - Responsible for silky smooth rotational animations, massively improves framerate
+- **Livetime Visualization** - Utilizes WebGL to visualize 
 
 ## Code Structure
 
@@ -44,6 +32,7 @@ The project is structured into the following key files:
 - **[`altimeter.py`](src/altimeter.py)**: Manages altitude measurement and data processing for the LoRa module.
 - **[`camera.py`](src/camera.py)**: Handles video capture and logging from a Raspberry Pi camera module, supporting non-blocking video recording.
 - **[`recieve.py`](src/recieve.py)**: Receives and decodes data from the LoRa module.
+- **[`quaternion.html`](src/quaternion.py)**: Abstracts quaternion mathematics for zeroing upon calibration
 - **[`metrics.py`](src/metrics.py)**: Provides functions for processing telemetry data, including time delta and quaternion encoding/decoding.
 - **[`requirements.txt`](requirements.txt)**: Lists the Python dependencies required for the project.
 - **[`transmit.py`](src/transmit.py)**: Encodes and transmits data to the LoRa module.
@@ -88,9 +77,12 @@ python RP15.py
 
 ## Contributors
 
-The following individuals have contributed to this project:
+The following individuals have contributed to this project's software:
 
-- [Matthew Tujague](https://github.com/Binimal101) - Lead Software Engineer/Avionics Lead
+- [Matthew Tujague](https://github.com/Binimal101) - Lead Software Engineer/Avionics Manager
+- [Victor Jimenez](https://github.com/VictorJimenez3) - Quaternion-based Interpolation Tech.
+- [Eric Zhang](https://github.com/ezhang04) - Visualization Specialist
+- [Ryan Ramos](https://github.com/ryanrnjit) - Visualization Specialist
 - [Amogh Karee](https://github.com/AmoghKaree) - Flask Web Developer
 - [Matthew Tolocka](https://github.com/mt657) - Software Optimization Specialist
 - [Nick C Volpe](https://github.com/ncvolpe) - Support Engineer
